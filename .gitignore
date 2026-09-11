@@ -1,0 +1,17 @@
+# Build products. `npm run build` writes dist/ with esbuild (index.mjs,
+# index.cjs, conformance-host.mjs) and tsc (index.d.ts); the runner is pointed
+# at ./conformance-host, the committed wrapper, which execs what is here.
+dist/
+
+# Local dependencies, test tools and environment configuration.
+node_modules/
+.contracts/
+__pycache__/
+*.log
+.DS_Store
+.env
+.env.*
+!.env.example
+*.tgz
+
+/release-artifacts/

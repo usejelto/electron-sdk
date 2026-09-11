@@ -1,0 +1,30 @@
+#!/bin/sh
+# spec/sdk-conformance.md §3: "Each SDK ships a tiny CLI host
+# (`sdk/<platform>/conformance-host`) that links the SDK exactly as a customer
+# would and executes commands from stdin."
+#
+# This file is that path. It is a wrapper for two reasons, both of them
+# properties of the harness rather than preferences:
+#
+#  1. The runner spawns the host as `exec.Command(binary)` -- one executable,
+#     no arguments (spec/conformance/runner/hostproc.go, StartHost). A Node
+#     entry point is `node <file>`, which that call cannot express, so the
+#     argument has to live on this side of it. `exec` replaces this shell, so
+#     node keeps THIS pid: C4c's mid-delay kill (hostproc.go, Kill) reaches the
+#     process that holds the SDK and not a parent that would leave it orphaned.
+#
+#  2. dist/ is a build product (.gitignore) and the runner needs a stable path.
+#
+# It runs under `node`: the only Electron API the SDK touches is
+# `app.getPath('userData')`, required lazily and overridden by JELTO_STATE_DIR
+# under spec/sdk-conformance.md §3 in every scenario,
+# so an Electron main process here would add a windowless GUI app to the gate
+# and change nothing the five assertion surfaces can see.
+set -e
+here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+entry="$here/dist/conformance-host.mjs"
+if [ ! -f "$entry" ]; then
+  echo "conformance-host: $entry is missing; run 'npm run build' in the SDK directory first" >&2
+  exit 2
+fi
+exec node "$entry" "$@"

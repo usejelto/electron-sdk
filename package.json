@@ -1,0 +1,45 @@
+{
+  "name": "@jelto/electron",
+  "version": "1.0.0",
+  "description": "Jelto SDK for Electron \u2014 main process only. RFC-0001 \u00a78, spec/wire-v1.md v1, spec/sdk-conformance.md.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/usejelto/electron-sdk.git"
+  },
+  "bugs": {
+    "url": "https://github.com/usejelto/electron-sdk/issues"
+  },
+  "homepage": "https://github.com/usejelto/electron-sdk",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.cjs",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "check": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.host.json",
+    "test": "npm run test:sdk && npm run test:host",
+    "test:sdk": "node --test \"src/**/*.test.ts\"",
+    "test:host": "node --test \"host/**/*.test.ts\""
+  },
+  "devDependencies": {
+    "@types/node": "^24.9.2",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.9.3"
+  }
+}
