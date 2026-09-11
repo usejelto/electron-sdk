@@ -54,6 +54,8 @@ jobs:
           package-manager-cache: false
       - name: Pinned npm packaging toolchain
         run: npm install --global npm@11.14.0 --ignore-scripts
+      - name: Dependency vulnerability check
+        run: npm audit --audit-level=moderate --package-lock-only
       - name: Install verified contracts pin
         if: inputs.release || inputs.conformance
         run: python3 vendor/release-tools/release.py contracts
