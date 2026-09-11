@@ -1,5 +1,6 @@
 // Keep instants as bigint and encode their decimal digits directly. A Number
-// would round the large values C15b requires unchanged (RFC-0001 §8.5).
+// would round the large values C15b requires unchanged, and instants must
+// survive the wire with their exact digits intact.
 
 /** spec/sdk-conformance.md §3.2's `last_heartbeat_day` divisor. */
 export const MS_PER_DAY = 86_400_000n
@@ -41,8 +42,7 @@ const TWO_48 = 1n << 48n
  * The value reduced into [0, 2^48) — a Euclidean modulus, so a pre-epoch
  * instant still yields a non-negative residue and `uuidV7` still produces a
  * well-formed, non-nil id (spec/wire-v1.md §3). An `id` is a dedup key, not a
- * second timestamp, and §8.5 does not let the SDK move the clock to make one
- * pretty.
+ * second timestamp, and the SDK must not move the clock to make one pretty.
  */
 export function low48(ms: bigint): bigint {
   return ((ms % TWO_48) + TWO_48) % TWO_48

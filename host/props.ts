@@ -41,10 +41,10 @@ export function parseProps(tokens: readonly string[], at: number): ParsedProps {
       props[key] = value
     }
     // A `null`, a nested object and an array are skipped rather than refused,
-    // which is what `sdk/swift`'s ConformanceHost does with them: RFC-0001
-    // §8.1's dictionary has no representation for any of the three, so there is
-    // no call the host could make that would carry one to the SDK. No scenario
-    // sends one.
+    // consistent with how other conformance hosts treat them: the
+    // install-property dictionary has no representation for any of the three,
+    // so there is no call the host could make that would carry one to the SDK.
+    // No scenario sends one.
   }
   return { ok: true, props }
 }

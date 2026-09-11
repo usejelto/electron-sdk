@@ -14,7 +14,7 @@ import {
 } from './backoff.ts'
 import { Clock } from './clock.ts'
 import { Debug } from './debug.ts'
-import { resolveEndpoint } from './endpoint.ts'
+import { validateEndpoint } from './endpoint.ts'
 import { millisUntil, parseInstant } from './instant.ts'
 import { detectPlatform, knownAppVersion, type Platform } from './platform.ts'
 import { EventQueue } from './queue.ts'
@@ -38,22 +38,27 @@ import {
   type QueuedEvent,
 } from './wire.ts'
 
-/** RFC-0001 §8.3 item 7, "2 s after init". */
+/** The first flush runs 2 s after init. */
 export const INIT_FLUSH_DELAY_MS = 2_000
-/** RFC-0001 §8.3 item 7, "5 s debounce after track". */
+/** Every track call debounces the flush by 5 s. */
 export const TRACK_DEBOUNCE_MS = 5_000
-/** RFC-0001 §8.2 item 4, "a random delay of 0-6 h". */
+/** The install claim waits a random 0-6 h after init. */
 export const INSTALL_MAX_DELAY_MS = 6 * 60 * 60 * 1000
-/** RFC-0001 §8.2 item 4, "or after 30 days of attempts". */
+/** Or the install claim goes out after 30 days of attempts, whichever comes first. */
 export const INSTALL_CLAIM_AFTER_MS = 30 * 24 * 60 * 60 * 1000
 /**
- * Bounds §8.3 item 7's "on app background/termination (best effort)". C1 gives
- * the process 1 s to exit with 1 000 events queued, so the flush cannot be
- * unbounded.
+ * Bounds the termination flush, which is best effort on app background or
+ * termination. C1 gives the process 1 s to exit with 1 000 events queued, so
+ * the flush cannot be unbounded.
  */
 export const TERMINATION_BUDGET_MS = 600
 /** One `advance` in REAL time, however many barriers it takes. */
 export const SETTLE_BUDGET_MS = 30_000
+
+/** spec/wire-v1.md §2: a product key's whole legal grammar. */
+export const PRODUCT_KEY_SHAPE = /^prd_[a-z0-9]{10}$/
+/** This SDK's own `install_id`: a canonical, lowercase, hyphenated UUID. */
+const INSTALL_ID_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 /** spec/sdk-conformance.md §3.2's export, key for key. Instants are DECIMAL STRINGS. */
 export interface StateExport {
@@ -82,8 +87,10 @@ interface AckWaiter {
 }
 
 export interface EngineOptions {
-  endpoint: string
-  stateDir: string
+  /** `null`: spec/wire-v1.md §1's endpoint rule was violated; the engine is inactive. */
+  endpoint: string | null
+  /** `null`: spec/sdk-conformance.md §5's state directory could not be resolved; the engine is inactive. */
+  stateDir: string | null
   clock: Clock
   log: Debug
   stderr: NodeJS.WritableStream
@@ -100,8 +107,9 @@ export class Engine {
   private readonly stderr: NodeJS.WritableStream
   private readonly store: Store
   private readonly queue: EventQueue
-  private readonly defaultEndpoint: string
-  private endpoint: string
+  private readonly stateDirActive: boolean
+  private readonly defaultEndpoint: string | null
+  private endpoint: string | null
   private readonly mock: string | null
   private readonly clientVersion: string | null
   private readonly env: NodeJS.ProcessEnv
@@ -139,8 +147,9 @@ export class Engine {
     this.clockPinned = options.clock.pinned
     this.log = options.log
     this.stderr = options.stderr
-    this.store = new Store(options.stateDir)
-    this.queue = new EventQueue(options.stateDir, this.store.queuePath)
+    this.stateDirActive = options.stateDir !== null
+    this.store = new Store(options.stateDir ?? '')
+    this.queue = new EventQueue(options.stateDir ?? '', this.store.queuePath)
     this.endpoint = options.endpoint
     this.defaultEndpoint = options.endpoint
     this.mock = options.mock
@@ -150,20 +159,32 @@ export class Engine {
 
 
   /**
-   * §8.2 item 1: returns immediately, all work on a background path (C1). §8.1:
-   * init happens once — except after `disable()`, where §8.7 item 18's
-   * "no-ops UNTIL THE NEXT INIT" re-arms it.
+   * Returns immediately, with all work on a background path (C1). init only
+   * happens once — except after `disable()`, whose "no-ops UNTIL THE NEXT
+   * INIT" contract re-arms it.
    */
   init(key: string, app?: string, endpoint?: string): void {
     if (this.started && !this.disabled) return
-    this.endpoint = resolveEndpoint(endpoint, this.defaultEndpoint, this.log)
+    const normalizedKey = typeof key === 'string' ? key : String(key)
+    // spec/wire-v1.md §2: a key outside the grammar is refused outright, not
+    // sent and discovered rejected later.
+    if (!PRODUCT_KEY_SHAPE.test(normalizedKey)) {
+      this.log.log(`drop init: product key must match ${PRODUCT_KEY_SHAPE.source}`)
+      return
+    }
+    // §1's explicit-argument tier: an invalid explicit endpoint is inactive
+    // (`null`) and never falls through to `this.defaultEndpoint` -- an absent
+    // one (undefined/empty) is what falls through to it.
+    this.endpoint = endpoint !== undefined && endpoint !== ''
+      ? validateEndpoint(endpoint, 'endpoint passed to init', this.log)
+      : this.defaultEndpoint
     this.transport?.close()
     this.transport = null
     const reArm = this.started && this.disabled
     this.started = true
     this.disabled = false
     this.quit = false
-    this.key = typeof key === 'string' ? key : String(key)
+    this.key = normalizedKey
     this.booted = false
     this.slug = gateAppSlug(app, this.log)
     setImmediate(() => {
@@ -173,7 +194,7 @@ export class Engine {
     })
   }
 
-  /** §8.1's `track`: queued; a no-op before `init` (C5) and after `disable()` (C18). */
+  /** `track` is queued; a no-op before `init` (C5) and after `disable()` (C18). */
   track(name: string, props?: Record<string, PropValue>): void {
     if (!this.ready()) return
     const gated = gateEventName(name, this.log)
@@ -183,14 +204,14 @@ export class Engine {
     const event: QueuedEvent = { id: uuidV7(now), n: gated, t: now.toString() }
     if (props !== undefined && props !== null && Object.keys(props).length > 0) event.props = { ...props }
     this.enqueue(event)
-    this.trackFlushAt = now + BigInt(TRACK_DEBOUNCE_MS) // §8.3 item 7, reset by every track
+    this.trackFlushAt = now + BigInt(TRACK_DEBOUNCE_MS) // the debounce timer, reset by every track
     this.notify()
   }
 
   /**
-   * §8.1's sugar. "the helper cannot do anything track cannot", so it validates
-   * §4's namespace and then calls exactly the same path — which is what C20's
-   * congruence check is looking for.
+   * Sugar over `track`. "The helper cannot do anything track cannot", so it
+   * validates §4's namespace and then calls exactly the same path — which is
+   * what C20's congruence check is looking for.
    */
   onboarding(step: string, status: string, reason?: string): void {
     if (!this.ready()) return
@@ -199,7 +220,7 @@ export class Engine {
     this.track(gated.name, gated.props)
   }
 
-  /** §8.1: "persisted, sent with every heartbeat, an immediate heartbeat on change". */
+  /** Install properties are persisted, sent with every heartbeat, with an immediate heartbeat on change. */
   setProps(raw: Record<string, PropValue>): void {
     if (!this.ready()) return
     const accepted = gateInstallProps(raw, this.log)
@@ -216,15 +237,16 @@ export class Engine {
     this.notify()
   }
 
-  /** §8.1's `installId`. Empty before `init` and after `disable()` (C18). */
+  /** `installId` is empty before `init` and after `disable()` (C18). */
   installId(): string {
     if (!this.ready()) return ''
     return this.installIDValue
   }
 
   /**
-   * §8.1's "rotate". NO RULE names what else it rotates — §8.1 says only "view,
-   * rotate, wipe (queue + id)" and no C-scenario exercises it. Follows refhost:
+   * Implements "rotate". NO RULE names what else it rotates — the public surface
+   * only promises "view, rotate, wipe (queue + id)" and no C-scenario exercises
+   * it. Follows refhost:
    * a new id is a new install, so the claim and the heartbeat day go with it.
    */
   reset(): void {
@@ -248,7 +270,7 @@ export class Engine {
     this.notify()
   }
 
-  /** §8.7 item 18: delete the queue and the install_id; no-ops until the next init. */
+  /** disable() deletes the queue and the install_id; no-ops until the next init. */
   disable(): void {
     if (!this.ready()) return
     this.disabled = true
@@ -305,7 +327,7 @@ export class Engine {
    * mockd cannot see.
    *
    * Pinned: settle, advance, settle. Both settles are load-bearing. Before,
-   * because §8.2 item 1 lets `init` return before the pump has read the clock,
+   * because `init` is allowed to return before the pump has read the clock,
    * so advancing without settling first moves the clock out from under
    * bootstrap and anchors init's own 2 s flush late. After, because that is the
    * settle proper: the work that BECAME due at the new time has been dispatched
@@ -323,7 +345,7 @@ export class Engine {
     await this.settle(deadline)
   }
 
-  /** §8.3 item 7's bounded best-effort termination flush. Leaves no live handles. */
+  /** The bounded, best-effort termination flush. Leaves no live handles. */
   async stop(): Promise<void> {
     if (!this.started) {
       this.closeTransport()
@@ -338,7 +360,7 @@ export class Engine {
     }
     if (this.queue.length > 0) {
       this.log.log(
-        `termination flush gave up with ${this.queue.length} events queued (best effort, RFC-0001 §8.3 item 7)`,
+        `termination flush gave up with ${this.queue.length} events queued (best effort; the flush is bounded)`,
       )
     }
 
@@ -351,10 +373,18 @@ export class Engine {
   }
 
 
-  /** The gate on every public call: false before `init` and after `disable()`. */
+  /**
+   * The gate on every public call: false before `init` and after `disable()`,
+   * and also false when spec/sdk-conformance.md §5's state directory could
+   * not be resolved (`stateDirActive`) -- there is nowhere safe to persist to,
+   * so the engine stays inactive rather than guessing a directory (C5's "no
+   * file" bar applies here too: this must not fall back to writing somewhere
+   * the caller never chose).
+   */
   private ready(): boolean {
     if (!this.started) return false
     if (this.disabled) return false
+    if (!this.stateDirActive) return false
     this.ensureBootstrapped()
     return !this.disabled
   }
@@ -363,6 +393,10 @@ export class Engine {
   private ensureBootstrapped(): void {
     if (this.booted || !this.started || this.disabled) return
     this.booted = true
+    // Nothing to boot: no legal directory to touch (`ready()` already keeps
+    // every public call inert). Setting `booted` regardless still lets the
+    // pump's idle barrier ack immediately instead of parking for 30 s.
+    if (!this.stateDirActive) return
 
     this.store.load()
     this.queue.load(this.store.get().pending_update?.id)
@@ -374,7 +408,7 @@ export class Engine {
     this.stagedUpdate = null
 
     this.store.update((state) => {
-      if (state.install_id === '' || state.install_id === NIL_UUID) state.install_id = uuidV4()
+      if (!INSTALL_ID_SHAPE.test(state.install_id) || state.install_id === NIL_UUID) state.install_id = uuidV4()
       // Persist the install schedule once so relaunch does not redraw its deadline (C4c).
       if (!state.install_claimed && state.install_due_at === '') {
         state.install_due_at = (now + BigInt(randomInstallDelay())).toString()
@@ -384,7 +418,7 @@ export class Engine {
     const state = this.store.get()
     this.installIDValue = state.install_id
     this.props = { ...state.install_props }
-    this.initFlushAt = now + BigInt(INIT_FLUSH_DELAY_MS) // §8.3 item 7's first trigger
+    this.initFlushAt = now + BigInt(INIT_FLUSH_DELAY_MS) // the first flush timer's trigger
     this.observeAppVersion()
 
     const day = this.clock.dayIndex()
@@ -400,7 +434,7 @@ export class Engine {
     if (event.metadata === undefined) event.metadata = this.eventMetadata()
     const dropped = this.queue.append(event)
     if (dropped > 0) {
-      this.log.log(`queue cap reached: dropped ${dropped} oldest event(s) (RFC-0001 §8.3 item 6)`)
+      this.log.log(`queue cap reached: dropped ${dropped} oldest event(s) (spec/sdk-conformance.md C6)`)
     }
     this.notify()
   }
@@ -448,7 +482,13 @@ export class Engine {
   private startPump(): void {
     if (this.pumpActive) return
     this.pumpActive = true
-    this.pumpDone = this.pumpLoop().catch(() => undefined)
+    this.pumpDone = this.pumpLoop().catch((error: unknown) => {
+      // The SDK never throws into the host, so this is swallowed rather than
+      // crashing it, but leave `pumpActive` clear (a wedged `true` here would
+      // make every future `startPump` a permanent no-op) and say so exactly once.
+      this.pumpActive = false
+      this.log.log(`pump loop stopped unexpectedly: ${error instanceof Error ? error.message : String(error)}`)
+    })
   }
 
   private async pumpLoop(): Promise<void> {
@@ -497,6 +537,9 @@ export class Engine {
   /** At most one due action, in this order, and the next deadline. */
   private async step(now: bigint): Promise<StepResult> {
     if (!this.started || this.disabled) return { next: null, acted: false }
+    // Inactive per spec/wire-v1.md §1 (endpoint) or spec/sdk-conformance.md §5
+    // (state directory): park forever rather than dispatch or persist anything.
+    if (!this.stateDirActive || this.endpoint === null) return { next: null, acted: false }
     if (!this.observeAppVersion()) return { next: now + 1000n, acted: false }
     const state = this.store.get()
 
@@ -505,7 +548,7 @@ export class Engine {
       this.store.update((next) => {
         next.install_claimed = true
       })
-      this.log.log('install claimed after 30 days of attempts without a 202 (RFC-0001 §8.2 item 4)')
+      this.log.log('install claimed after 30 days of attempts without a 202 (spec/sdk-conformance.md C4b)')
       return { next: null, acted: true }
     }
 
@@ -605,8 +648,13 @@ export class Engine {
     }
   }
 
+  /**
+   * `step` never reaches `sendBatch`/`sendProbe` while `this.endpoint` is
+   * `null` (spec/wire-v1.md §1's inactive engine), so this fallback is
+   * defensive rather than load-bearing.
+   */
   private connection(): Transport {
-    if (this.transport === null) this.transport = new Transport(this.endpoint, this.mock)
+    if (this.transport === null) this.transport = new Transport(this.endpoint ?? '', this.mock, this.log)
     return this.transport
   }
 
@@ -635,7 +683,7 @@ export class Engine {
       return
     }
 
-    this.log.payload(body) // §8.7 item 17: printed BEFORE it is sent (C17)
+    this.log.payload(body) // printed BEFORE it is sent (C17)
     const outcome = await this.connection().post(body)
     // Measure Retry-After from response arrival, not request start.
     const answeredAt = this.clock.now()
@@ -649,7 +697,7 @@ export class Engine {
       this.queue.removeIDs(new Set(queued.slice(0, used).map((event) => event.id)))
       if (queued.slice(0, used).some((event) => event.n === 'install')) {
         this.store.update((state) => {
-          state.install_claimed = true // §8.2 item 4: "Mark claimed on 202"
+          state.install_claimed = true // the install claim is marked on 202
         })
       }
       this.applyAccepted(answeredAt, outcome)
@@ -760,13 +808,13 @@ export class Engine {
     const parsed = parseResponse(outcome.body)
     const suffix = parsed !== null && parsed.error !== '' ? ` ${parsed.error}` : ''
     this.log.log(
-      `batch dropped: status=${outcome.status}${suffix} -- final, not retried (RFC-0001 §8.3 items 8-9, spec/wire-v1.md §2a)`,
+      `batch dropped: status=${outcome.status}${suffix} -- final, not retried (spec/wire-v1.md §2a)`,
     )
   }
 
   private applyBackoff(answeredAt: bigint, outcome: Outcome): void {
     if (outcome.error !== null) {
-      this.log.log(`request failed: ${outcome.error} (network error, retryable per RFC-0001 §8.3 item 8)`)
+      this.log.log(`request failed: ${outcome.error} (network error, retryable per spec/wire-v1.md §2a)`)
     }
     const note = headerNote(outcome.retryAfter)
     if (note !== null) this.log.log(note)
@@ -797,8 +845,7 @@ export class Engine {
   }
 
   // Acknowledge barriers only after observing the advanced clock and finding no due work,
-  // including completion of in-flight requests. Quiet polling cannot prove the pump ran
-  // (conformance/TODO.md §5).
+  // including completion of in-flight requests. Quiet polling cannot prove the pump ran.
 
   private openBarrier(): number {
     this.idleWant += 1
@@ -854,7 +901,7 @@ function sameProps(a: Record<string, string>, b: Record<string, string>): boolea
   return keys.every((key) => a[key] === b[key])
 }
 
-/** RFC-0001 §8.2 item 4: RANDOM, with no seed knob (spec/sdk-conformance.md §3.1). */
+/** The install delay is RANDOM, with no seed knob (spec/sdk-conformance.md §3.1). */
 function randomInstallDelay(): number {
   return Math.floor(Math.random() * INSTALL_MAX_DELAY_MS)
 }

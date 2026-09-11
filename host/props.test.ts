@@ -61,8 +61,8 @@ test('a token that is not a JSON object is refused', () => {
   }
 })
 
-test('a value with no representation in the §8.1 surface is skipped, not refused', () => {
-  // RFC-0001 §8.1's dictionary takes a string, a number or a boolean; there is
-  // no call the host could make that carries a null, an object or an array.
+test('a value with no representation in the install-property dictionary is skipped, not refused', () => {
+  // The install-property dictionary takes a string, a number or a boolean;
+  // there is no call the host could make that carries a null, an object or an array.
   assert.deepEqual(propsOf('track x {"a":"s","b":null,"c":{"d":1},"e":[1]}', 2), { a: 's' })
 })

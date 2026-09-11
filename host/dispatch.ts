@@ -9,7 +9,7 @@ export type { PropValue }
 
 /**
  * What the host needs of the SDK. It is a structural subset of the
- * `ConformanceSdk` that `sdk/electron/src/index.ts` exports, declared here so
+ * `ConformanceSdk` that `src/index.ts` exports, declared here so
  * that this module -- and its tests -- do not depend on the SDK half of the
  * package; `main.ts` is where the two are joined, and `tsc -p
  * tsconfig.host.json` is what checks that the real one still satisfies it.
@@ -103,10 +103,10 @@ export function createDispatcher(sdk: HostSdk, options: DispatcherOptions = {}):
     try {
       return { reply: await run(cmd, tokens), terminate: false }
     } catch (err) {
-      // RFC-0001 §8.3 item 10 says the SDK never throws into the host, so
-      // reaching here is a finding. It is reported on the reply -- where the
-      // runner prints it and fails the arm -- and NOT on stderr, which C10
-      // asserts is byte-empty without JELTO_DEBUG.
+      // The SDK never throws into the host, so reaching here is a finding. It
+      // is reported on the reply -- where the runner prints it and fails the
+      // arm -- and NOT on stderr, which C10 asserts is byte-empty without
+      // JELTO_DEBUG.
       return { reply: { cmd, ok: false, error: messageOf(err) }, terminate: false }
     }
   }

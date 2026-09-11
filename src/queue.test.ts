@@ -1,4 +1,4 @@
-// RFC-0001 §8.3 item 6 — C6, and the reload half C4b and C8 turn on.
+// The queue's cap-eviction rule — C6, and the reload half C4b and C8 turn on.
 
 import assert from 'node:assert/strict'
 import { appendFileSync, existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs'

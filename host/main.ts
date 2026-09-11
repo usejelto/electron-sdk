@@ -41,7 +41,7 @@ function build(env: NodeJS.ProcessEnv): HostSdk {
   }
   try {
     // The rest of §3's environment goes to the SDK unread by the host:
-    // JELTO_DEBUG turns on §8.7 item 17's printing, JELTO_MOCK is forwarded
+    // JELTO_DEBUG turns on the debug payload printing, JELTO_MOCK is forwarded
     // verbatim as `X-Mock`, and JELTO_CLIENT_VERSION replaces `v` -- the empty
     // string included, which is why the host must not test any of them for
     // emptiness on the way past.
@@ -79,7 +79,7 @@ for await (const rawLine of rl) {
   // never sees at all.
   await writeLine(process.stdout, encodeReply(outcome.reply))
   if (outcome.terminate) {
-    // `exit` has already run §8.3 item 7's termination flush inside dispatch,
+    // `exit` has already run the termination flush inside dispatch,
     // and its reply is now on the wire. C1 measures this whole path at under
     // one second with a thousand events queued, so the process ends here rather
     // than waiting to discover whether anything is still holding the loop open.
@@ -95,7 +95,8 @@ await writeLine(process.stdout, encodeReply({ cmd: 'eof', ok: true }))
 try {
   await sdk.stop()
 } catch {
-  // §8.3 item 7 is best effort by definition, and there is no longer anyone to
-  // report to: stdin is closed and the exit code is the only channel left.
+  // The termination flush is best effort by definition, and there is no
+  // longer anyone to report to: stdin is closed and the exit code is the only
+  // channel left.
 }
 process.exit(0)

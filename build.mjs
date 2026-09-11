@@ -1,8 +1,8 @@
 // Build for @jelto/electron. Three artefacts, no framework:
 //
-//   dist/index.mjs / index.cjs   the SDK a customer links (RFC-0001 §8.8:
-//                                "TypeScript, main process only, Node >= 18,
-//                                no native addon"). `electron` is EXTERNAL --
+//   dist/index.mjs / index.cjs   the SDK a customer links: TypeScript, main
+//                                process only, Node >= 18, no native addon.
+//                                `electron` is EXTERNAL --
 //                                the SDK requires it lazily and only to resolve
 //                                §5's default state directory, so the bundle
 //                                loads under plain node too, which is what the
@@ -11,9 +11,9 @@
 //   dist/conformance-host.mjs    spec/sdk-conformance.md §3's host. The
 //                                committed ./conformance-host wrapper execs it.
 //
-// It is deliberately NOT minified: RFC-0001 §8.7 item 19 wants a reproducible
-// artefact a reader can check, and nothing here is served over a wire with a
-// byte budget (that is web/snippet, spec/snippet.md §1).
+// It is deliberately NOT minified: a reproducible artefact a reader can check
+// is wanted here, and nothing in this bundle is served over a wire with a
+// byte budget (that is the web snippet, a separate artefact).
 import { build } from 'esbuild'
 import { execFileSync } from 'node:child_process'
 import { rmSync, mkdirSync } from 'node:fs'

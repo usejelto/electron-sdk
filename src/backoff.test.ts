@@ -1,4 +1,4 @@
-// spec/wire-v1.md §9 composed with RFC-0001 §8.3 item 8 — C8, C8b, C8c.
+// spec/wire-v1.md §9's backoff policy, applied to the retryable failure class — C8, C8b, C8c.
 
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
@@ -100,7 +100,7 @@ test('jitter stays inside ±20 % whatever the caller hands over', () => {
   assert.equal(nextBackoff(1_000, null, 0n, 1.2).waitMS, 1_200)
   assert.equal(nextBackoff(1_000, null, 0n, 99).waitMS, 1_200)
   assert.equal(nextBackoff(1_000, null, 0n, -99).waitMS, 800)
-  // NaN would trap `min`/`max` into propagating it; RFC-0001 §8.3 item 10
-  // forbids throwing into the host.
+  // NaN would trap `min`/`max` into propagating it, and the SDK never throws
+  // into the host.
   assert.equal(nextBackoff(1_000, null, 0n, Number.NaN).waitMS, 1_000)
 })

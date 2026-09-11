@@ -9,7 +9,7 @@ import { low48 } from './instant.ts'
  */
 export const NIL_UUID = '00000000-0000-0000-0000-000000000000'
 
-/** RFC-0001 §8.2 item 2's install_id: "create a UUIDv4 if absent" (C2). */
+/** The install_id is created as a UUIDv4 if absent (C2). */
 export function uuidV4(): string {
   return randomUUID()
 }

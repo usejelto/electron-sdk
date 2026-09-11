@@ -1,29 +1,37 @@
 // Persist exact instants as decimal strings. Storage format is private to the SDK;
 // engine.exportState exposes the semantic contract in spec/sdk-conformance.md §3.2.
 
-import { readdirSync, readFileSync, rmSync } from 'node:fs'
+import { readFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { atomicWrite } from './atomic.ts'
 import type { QueuedEvent } from './wire.ts'
+
+/**
+ * Every filesystem entry this SDK, across `store.ts`, `queue.ts` and
+ * `atomic.ts`, ever creates in the state directory: the two checkpoints and
+ * `atomicWrite`'s own `.tmp` siblings. Nothing else in that directory is
+ * this SDK's to delete.
+ */
+const OWNED_ENTRIES = ['state.json', 'state.json.tmp', 'queue.jsonl', 'queue.jsonl.tmp']
 
 export interface PersistedState {
   install_id: string
   last_app_version: string
   pending_update?: QueuedEvent
-  /** UTC day index, decimal (§8.2 item 3, C3). */
+  /** UTC day index, decimal (C3). */
   last_heartbeat_day: string
   install_claimed: boolean
-  /** §8.2 item 4's 0-6 h delay, a DEADLINE and not a countdown (C4c). */
+  /** The install's random 0-6 h delay, a DEADLINE and not a countdown (C4c). */
   install_due_at: string
-  /** §8.2 item 4's "after 30 days of attempts" has to be measured from something (C4b). */
+  /** The "after 30 days of attempts" claim has to be measured from something (C4b). */
   install_first_try: string
   install_props: Record<string, string>
-  /** §8.3 item 8; 0 means "not in backoff". */
+  /** The backoff step in ms; 0 means "not in backoff". */
   backoff_step_ms: number
   backoff_next_at: string
   /** Consecutive refusals. §3.2 rules this OUT of the export; it is bookkeeping. */
   backoff_failures: number
-  /** §8.6 / wire §8, absolute MILLISECONDS on the SDK clock (wire §8 sends seconds). */
+  /** The kill switch deadline, absolute MILLISECONDS on the SDK clock (wire §8 sends seconds). */
   stop_until: string
   stop_probe_due: boolean
 }
@@ -61,8 +69,9 @@ export class Store {
 
   /**
    * Reads state.json, creating neither the file nor the directory when it is
-   * absent (§8.2 item 5, C5). A file that cannot be parsed is treated as
-   * absent: a corrupt state costs an install id, not a crash (§8.3 item 10).
+   * absent (C5). A file that cannot be parsed is treated as absent: a corrupt
+   * state costs an install id, not a crash, since the SDK never throws into
+   * the host.
    */
   load(): PersistedState {
     this.state = emptyState()
@@ -125,16 +134,20 @@ export class Store {
   }
 
   /**
-   * RFC-0001 §8.7 item 18. C18 and C22d assert the state DIRECTORY is empty
-   * afterwards, so everything this SDK put there goes — not only the two
-   * fields.
+   * disable() deletes the queue and the install_id. C18 and C22d assert the
+   * state directory holds nothing this SDK put there afterwards — but ONLY
+   * what this SDK put there: a directory it was merely handed
+   * (spec/sdk-conformance.md §5) can hold a customer's own files, and
+   * disable() is not license to delete those too.
    */
   wipe(): void {
     this.state = emptyState()
-    try {
-      for (const entry of readdirSync(this.dir)) rmSync(join(this.dir, entry), { recursive: true, force: true })
-    } catch {
-      // The directory may not exist; nothing to wipe (§8.3 item 10).
+    for (const name of OWNED_ENTRIES) {
+      try {
+        rmSync(join(this.dir, name), { force: true })
+      } catch {
+        // The directory may not exist; nothing to wipe.
+      }
     }
   }
 }

@@ -19,4 +19,5 @@ conformance: build
 	go -C "$(JELTO_CONTRACTS_DIR)" run ./spec/conformance/runner -contracts-version "$(JELTO_CONTRACTS_VERSION)" -host "$(CURDIR)/conformance-host"
 
 package: build
+	node scripts/check-pack.mjs
 	npm pack

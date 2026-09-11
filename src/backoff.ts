@@ -49,7 +49,7 @@ export interface BackoffResult {
   source: string
   /** The absolute instant of the next attempt, on the SDK clock. */
   deadline: bigint
-  /** What a NEW PROCESS must resume at (§8.3 item 8, "persisted across launches"). */
+  /** What a NEW PROCESS must resume at, "persisted across launches". */
   nextStepMS: number
   /** The step that governed THIS wait, for the debug line. */
   governingStepMS: number

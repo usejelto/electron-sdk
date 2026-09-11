@@ -10,10 +10,10 @@ import { gateClientVersion, type PropValue } from './wire.ts'
 export type { StateExport } from './engine.ts'
 export type { PropValue } from './wire.ts'
 
-/** RFC-0001 §8.1's whole public surface. No other public API in v1. */
+/** The Jelto SDK's whole public surface. No other public API in v1. */
 export interface Jelto {
   /**
-   * `endpoint` is for a customer on a first-party subdomain (RFC-0001 §10), who
+   * `endpoint` is for a customer on a first-party subdomain, who
    * serves `/v1/e` on their own hostname. Omit it and the SDK sends to
    * spec/wire-v1.md §1's production host, which is what every ordinary
    * integration wants: a REQUIRED endpoint is one more thing every integration
@@ -37,7 +37,7 @@ export interface ConformanceSdk extends Jelto {
   readonly clockPinned: boolean
   /** §3's `sleep <ms>`. Pinned: settle, advance, settle. Unpinned: really sleep. */
   advance(ms: number): Promise<void>
-  /** §8.3 item 7's bounded best-effort termination flush; leaves no live handles. */
+  /** The bounded, best-effort termination flush on app background or termination; leaves no live handles. */
   stop(): Promise<void>
 }
 
@@ -49,8 +49,7 @@ export interface ConformanceSdk extends Jelto {
  *
  * A malformed `JELTO_NOW` leaves the clock UNPINNED and writes one debug line
  * rather than throwing. The seam names exactly two throwing conditions and this
- * is not one of them; RFC-0001 §8.3 item 10 forbids throwing into the host
- * besides.
+ * is not one of them; the SDK never throws into the host besides.
  */
 export function createSdk(env: NodeJS.ProcessEnv, stderr: NodeJS.WritableStream): ConformanceSdk {
   const endpoint = env['JELTO_ENDPOINT'] ?? ''
@@ -70,9 +69,12 @@ function build(
   env: NodeJS.ProcessEnv,
   stderr: NodeJS.WritableStream,
   endpointOverride: string | undefined,
-  stateDir: string,
+  stateDir: string | null,
 ): ConformanceSdk {
   const log = new Debug(stderr, env['JELTO_DEBUG'] === '1')
+  if (stateDir === null) {
+    log.log('jelto: not running in the Electron main process; SDK inactive')
+  }
   const endpoint = resolveEndpoint(endpointOverride, env['JELTO_ENDPOINT'], log)
 
   // The PRESENCE of JELTO_NOW is the pin, so JELTO_NOW=0 is a legal 1970 clock
@@ -104,15 +106,21 @@ function build(
  * `app.getPath('userData')/jelto/`. `electron` is required LAZILY and inside a
  * try/catch, so the bundle loads under plain `node` too — which is what the
  * conformance host runs on, and where JELTO_STATE_DIR overrides this anyway.
+ *
+ * The override is checked FIRST and unconditionally -- the conformance host
+ * relies on JELTO_STATE_DIR overriding this in every scenario, whether or not
+ * `electronApp()` would itself resolve. Absent an override, `electronApp()`
+ * returning `null` (not the Electron main process; spec/sdk-conformance.md
+ * §5's "main process only") leaves NO legal directory: this returns `null`
+ * rather than inventing one such as the old `$HOME/.jelto`, which any process
+ * on the machine — not only this SDK's own host app — could read or write.
  */
-function defaultStateDir(env: NodeJS.ProcessEnv): string {
+export function defaultStateDir(env: NodeJS.ProcessEnv): string | null {
   const override = env['JELTO_STATE_DIR'] ?? ''
   if (override !== '') return override
   const userData = electronApp()?.getPath?.('userData')
   if (typeof userData === 'string' && userData !== '') return `${userData}/jelto`
-  // Not an Electron main process. Nothing here may throw into the host, so the
-  // SDK falls back rather than refusing to load.
-  return `${env['HOME'] ?? env['USERPROFILE'] ?? '.'}/.jelto`
+  return null
 }
 
 let singleton: ConformanceSdk | null = null

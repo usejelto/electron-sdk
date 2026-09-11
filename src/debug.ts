@@ -37,8 +37,8 @@ export class Debug {
    * scenario expects whole.
    */
   static display(value: unknown): string {
-    // `unknown`, not `string`: RFC-0001 §8.3 item 10 forbids throwing into the
-    // host, and a JavaScript caller can hand any type past the declaration.
+    // `unknown`, not `string`: the SDK never throws into the host, and a
+    // JavaScript caller can hand any type past the declaration.
     const text = typeof value === 'string' ? value : safeString(value)
     let inner = ''
     let truncated = false

@@ -11,7 +11,7 @@ export const MAX_PROPS = 20
 export const MAX_PROP_STRING = 200
 export const MAX_REASON_CHARS = 64
 
-/** RFC-0001 §8.8 names `electron/1.0.3` as the shape (spec/wire-v1.md §3). */
+/** The client version follows the `electron/1.0.3` shape (spec/wire-v1.md §3). */
 export const SDK_CLIENT_VERSION = 'electron/1.0.0'
 
 export type PropValue = string | number | boolean
@@ -70,8 +70,8 @@ const RE_DECIMAL = /^-?[0-9]+$/
 /** W2. `null` means: this name may not be sent. */
 export function gateEventName(name: string, log: Debug): string | null {
   // The `typeof` guards in this file are not belt-and-braces: the declarations
-  // are erased at run time and a JavaScript host can pass anything, while
-  // RFC-0001 §8.3 item 10 forbids throwing into it. A value of the wrong type
+  // are erased at run time and a JavaScript host can pass anything, while the
+  // SDK never throws into it. A value of the wrong type
   // is a client-side drop with a line, exactly like a value of the wrong shape.
   if (typeof name !== 'string' || !RE_EVENT_NAME.test(name)) {
     log.log(`drop event ${Debug.display(name)}: spec/wire-v1.md §3 \`n\` is ^[a-z0-9_:.-]{1,64}$`)
@@ -132,7 +132,7 @@ export function gateTrackProps(props: Record<string, PropValue> | undefined, eve
 }
 
 /**
- * RFC-0001 §8.1's sugar and C20's trap. Returns `("onboarding:" + step, props)`
+ * The onboarding sugar and C20's trap. Returns `("onboarding:" + step, props)`
  * and nothing else — the caller feeds it to the SAME `track` path, which is
  * what C20's congruence check is looking for. C20b's two rows are here.
  */
@@ -336,7 +336,7 @@ export interface ServerResponse {
 /**
  * The part of a body an SDK acts on: spec/wire-v1.md §6's `rejected`, §8's
  * `stop`, §2a's `error`. Nothing else is read, and an unreadable body is a
- * swallowed failure (RFC-0001 §8.3 item 10), never a retry.
+ * swallowed failure, never a retry, since the SDK never throws into the host.
  *
  * `stop.until`'s digits are lifted from the RAW TEXT rather than from
  * `JSON.parse`'s `number`, for the same reason `t` is: a `number` is a double.
@@ -372,17 +372,25 @@ export function parseResponse(body: Buffer): ServerResponse | null {
   if (rawStop !== null && typeof rawStop === 'object' && !Array.isArray(rawStop)) {
     const row = rawStop as Record<string, unknown>
     const scope = typeof row['scope'] === 'string' ? row['scope'] : ''
-    const literal = /"until"\s*:\s*(-?[0-9]+)/.exec(text)
+    // Scoped to the `"stop":{...}` object itself (no nested `{`/`}` inside it):
+    // an unscoped search would match the FIRST `"until"` anywhere in the body,
+    // including one planted in an unrelated field such as a `rejected` entry.
+    const literal = /"stop"\s*:\s*\{[^{}]*"until"\s*:\s*(-?[0-9]+)/.exec(text)
+    const digits = literal?.[1]
+    // A 15-digit magnitude comfortably covers any real Unix-seconds value
+    // (10 digits today) with room to spare; anything longer is treated as
+    // absent rather than handed to BigInt() as a trusted deadline.
+    const withinRange = digits !== undefined && digits.replace(/^-/, '').length <= 15
     let untilSeconds: bigint | null = null
     let untilText = ''
-    if (literal !== null && literal[1] !== undefined) {
-      untilText = literal[1]
-      untilSeconds = BigInt(literal[1])
+    if (withinRange) {
+      untilText = digits
+      untilSeconds = BigInt(digits)
     } else if (typeof row['until'] === 'number' && Number.isSafeInteger(row['until'])) {
       untilText = String(row['until'])
       untilSeconds = BigInt(row['until'] as number)
     } else {
-      untilText = String(row['until'])
+      untilText = digits ?? String(row['until'])
     }
     stop = { untilSeconds, untilText, scope }
   }

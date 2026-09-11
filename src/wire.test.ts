@@ -45,7 +45,8 @@ test('C15b: both instants reach the body bytes as bare JSON number literals', ()
     assert.equal(used, 1)
     const bytes = body.toString('utf8')
     // The digits, unquoted, exactly as the clock holds them. A `number` would
-    // render 99999999999999999999 as 100000000000000000000 (RFC-0001 §8.5).
+    // render 99999999999999999999 as 100000000000000000000, and instants must
+    // survive the wire with their exact digits intact.
     assert.ok(bytes.includes(`"t":${literal},`), bytes)
     assert.ok(!bytes.includes(`"t":"${literal}"`))
     // And a JSON reader that is not a float64 gets the same digits back.
@@ -197,7 +198,18 @@ test('§6/§8: a 202 body is read for `rejected`, `stop` and `error` and nothing
   // C10's invalid JSON is a swallowed failure, never a retry.
   assert.equal(parseResponse(Buffer.from('not json at all')), null)
   assert.equal(parseResponse(Buffer.from('[]')), null)
-  // `until`'s digits come off the RAW TEXT, so a value past 2^53 is exact.
-  const huge = parseResponse(Buffer.from('{"stop":{"until":9007199254740993,"scope":"app"}}'))
-  assert.equal(huge?.stop?.untilSeconds, 9007199254740993n)
+  // `until`'s digits come off the RAW TEXT, so a value up to the 15-digit cap
+  // below is exact even past 2^53 (9007199254740991, 16 digits).
+  const precise = parseResponse(Buffer.from('{"stop":{"until":999999999999999,"scope":"app"}}'))
+  assert.equal(precise?.stop?.untilSeconds, 999999999999999n)
+  // Longer than 15 digits -- no real Unix-seconds value is -- is treated as
+  // absent rather than handed to BigInt() as a trusted deadline.
+  const tooLong = parseResponse(Buffer.from(`{"stop":{"until":${'9'.repeat(40)},"scope":"app"}}`))
+  assert.equal(tooLong?.stop?.untilSeconds, null)
+  // Scoped to the `"stop":{...}` object: an `until` planted in an unrelated
+  // field (here, a rejection entry) must not be mistaken for the real one.
+  const scoped = parseResponse(
+    Buffer.from('{"rejected":[{"i":0,"until":5}],"stop":{"until":1756300000,"scope":"app"}}'),
+  )
+  assert.equal(scoped?.stop?.untilSeconds, 1756300000n)
 })

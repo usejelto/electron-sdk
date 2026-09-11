@@ -47,7 +47,8 @@ test("an installid that printed nothing still prints a `value` key", () => {
 test("§3.2's instants stay decimal strings through the reply", () => {
   // The export's instants are strings precisely so nothing rounds them; the
   // host must not turn one into a JSON number on the way out. C15b's clock is
-  // past int64 and RFC-0001 §8.5 forbids correcting it.
+  // past int64, and instants must survive with their exact digits intact
+  // rather than being "corrected".
   const state = {
     install_id: '2a0e5f9c-0000-4000-8000-000000000000',
     last_heartbeat_day: '20696',

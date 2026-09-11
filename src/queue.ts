@@ -36,7 +36,7 @@ export class EventQueue {
 
   /**
    * Reads the file if it exists, creating nothing: before `init` the SDK
-   * touches no file (§8.2 item 5, C5).
+   * touches no file (C5).
    */
   load(pendingUpdateID?: string): void {
     this.entries = []
@@ -60,7 +60,7 @@ export class EventQueue {
         event = JSON.parse(line) as QueuedEvent & { recovered_update_id?: string }
       } catch {
         // A half-written line from a killed process costs that event, not the
-        // file (§8.3 item 10).
+        // file.
         continue
       }
       if (event === null || typeof event !== 'object') continue
@@ -102,8 +102,8 @@ export class EventQueue {
         appendFileSync(this.path, `${line}\n`, { mode: 0o600 })
         this.fileBytes += bytes
       } catch {
-        // §8.3 item 10: a queue that cannot be persisted is still held in
-        // memory and still sent; it does not throw into the host.
+        // The SDK never throws into the host: a queue that cannot be
+        // persisted is still held in memory and still sent.
         this.needsRewrite = true
       }
     }
@@ -125,8 +125,9 @@ export class EventQueue {
 
   /**
    * Up to `n` events from the front WITHOUT removing them: a batch is only
-   * removed once the server has accepted it, because §8.3 item 8 retries the
-   * same batch and spec/wire-v1.md §6 forbids altering its `id`s (C8).
+   * removed once the server has accepted it, because a retryable failure
+   * retries the same batch and spec/wire-v1.md §6 forbids altering its `id`s
+   * (C8).
    */
   head(n: number): QueuedEvent[] {
     return this.entries.slice(0, n).map((entry) => entry.event)
@@ -157,7 +158,7 @@ export class EventQueue {
 
   /**
    * `install` is enqueued once per launch at most, and only when the previous
-   * launch's copy is not still waiting (§8.2 item 4, C4's "exactly one", C4b).
+   * launch's copy is not still waiting (C4's "exactly one", C4b).
    */
   contains(name: string): boolean {
     return this.entries.some((entry) => entry.event.n === name)
@@ -200,7 +201,7 @@ export class EventQueue {
     return this.entries.map((entry) => ({ id: entry.event.id, n: entry.event.n, t: entry.event.t }))
   }
 
-  /** disable()'s half of RFC-0001 §8.7 item 18 (C18). */
+  /** disable()'s half of deleting the queue and the install_id (C18). */
   delete(): void {
     this.entries = []
     this.total = 0
@@ -210,7 +211,7 @@ export class EventQueue {
       this.fileBytes = 0
       this.needsRewrite = false
     } catch {
-      // Swallowed (§8.3 item 10).
+      // Swallowed: the SDK never throws into the host.
       this.needsRewrite = true
     }
   }
@@ -231,7 +232,7 @@ export class EventQueue {
         this.needsRewrite = false
       }
     } catch {
-      // Swallowed (§8.3 item 10).
+      // Swallowed: the SDK never throws into the host.
     }
   }
 

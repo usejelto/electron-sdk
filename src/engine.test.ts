@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import { createSdk, type ConformanceSdk } from './index.ts'
+import { Clock, Debug, Engine } from './engine.ts'
 import { Store } from './store.ts'
 import { EventQueue, QUEUE_MAX_EVENTS } from './queue.ts'
 import type { QueuedEvent } from './wire.ts'
@@ -343,8 +344,8 @@ test('C2/C3: one heartbeat per UTC day, and the install id survives a relaunch',
     const id = first.sdk.installId()
     assert.match(id, v4)
     assert.match(first.sdk.exportState().install_id, v4)
-    // Counted rather than listed: RFC-0001 §8.2 item 4's install delay is a
-    // RANDOM 0-6 h, so on about one run in 7 200 it lands inside a 3 s advance
+    // Counted rather than listed: the install delay is a RANDOM 0-6 h, so on
+    // about one run in 7 200 it lands inside a 3 s advance
     // and joins the batch. The real C3 scenario has the same exposure and its
     // `request_count: 2` inherits it; see the report.
     assert.equal(heartbeats(mock), 1)
@@ -807,4 +808,113 @@ test('the SDK never throws into the host, whatever it is handed', async () => {
     assert.doesNotThrow(() => rig.sdk.reset())
     assert.doesNotThrow(() => rig.sdk.installId())
   })
+})
+
+test('spec/wire-v1.md §2: a key outside the grammar is refused, and init stays inert', async () => {
+  await withRig(async (rig, mock) => {
+    rig.sdk.init('not-a-product-key')
+    rig.sdk.track('x')
+    await rig.sdk.advance(6_000)
+    assert.equal(mock.requests.length, 0)
+    assert.equal(rig.sdk.installId(), '')
+    assert.ok(rig.stderr().includes('drop init: product key must match'), rig.stderr())
+    // The refusal did not consume `started`: a later, valid init still works.
+    rig.sdk.init(KEY)
+    await rig.sdk.advance(6_000)
+    assert.ok(mock.requests.length > 0)
+  })
+})
+
+test('spec/sdk-conformance.md §5: a null state directory leaves the engine permanently inactive', async () => {
+  let text = ''
+  const stderr = { write: (chunk: string | Buffer): boolean => ((text += chunk.toString()), true) }
+  const engine = new Engine({
+    endpoint: 'https://example.invalid/v1/e',
+    stateDir: null,
+    clock: new Clock(0n),
+    log: new Debug(stderr as unknown as NodeJS.WritableStream, true),
+    stderr: stderr as unknown as NodeJS.WritableStream,
+    mock: null,
+    clientVersion: null,
+    env: {},
+  })
+  engine.init(KEY)
+  engine.track('x')
+  await engine.advance(10_000)
+  assert.equal(engine.installId(), '')
+  assert.deepEqual(engine.exportState(), { install_id: '', install_claimed: false, queue: { bytes: 0, events: [] } })
+  await engine.stop()
+})
+
+test('an install_id outside the canonical UUID grammar is replaced, not trusted', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'jelto-engine-badid-'))
+  new Store(dir).update((state) => {
+    state.install_id = 'not-a-uuid'
+  })
+  const v4ish = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+  try {
+    await withRig(async (rig) => {
+      rig.sdk.init(KEY)
+      await rig.sdk.advance(0)
+      const id = rig.sdk.installId()
+      assert.match(id, v4ish)
+      assert.notEqual(id, 'not-a-uuid')
+      assert.match(new Store(dir).load().install_id, v4ish)
+    }, { JELTO_NOW: '0' }, { dir })
+  } finally { rmSync(dir, { recursive: true, force: true }) }
+})
+
+test('a JELTO_MOCK value hostile to headers is dropped, not fatal — events still get delivered', async () => {
+  await withRig(
+    async (rig, mock) => {
+      rig.sdk.init(KEY)
+      rig.sdk.track('x')
+      await rig.sdk.advance(6_000)
+      assert.ok(mock.requests.length > 0, 'the batch was still sent despite the malformed JELTO_MOCK')
+      assert.equal(mock.requests[0]?.headers['x-mock'], undefined)
+      assert.ok(rig.stderr().includes('header-safe ASCII range'), rig.stderr())
+    },
+    { JELTO_NOW: '0', JELTO_MOCK: 'x\nX-Evil: 1' },
+  )
+})
+
+class FlakyClock extends Clock {
+  calls = 0
+  override now(): bigint {
+    this.calls += 1
+    // Calls 1-2 are `ensureBootstrapped`'s own (its `now()` and `dayIndex()`,
+    // which calls `now()` again); call 3 is the FIRST inside `pumpLoop` itself,
+    // which is the crash this test means to exercise.
+    if (this.calls === 3) throw new Error('clock exploded')
+    return super.now()
+  }
+}
+
+test('a pump loop that throws clears pumpActive and logs once, rather than wedging forever', async () => {
+  let text = ''
+  const stderr = { write: (chunk: string | Buffer): boolean => ((text += chunk.toString()), true) }
+  const dir = mkdtempSync(join(tmpdir(), 'jelto-engine-pumpcrash-'))
+  const engine = new Engine({
+    endpoint: 'https://example.invalid/v1/e',
+    stateDir: dir,
+    clock: new FlakyClock(0n),
+    log: new Debug(stderr as unknown as NodeJS.WritableStream, true),
+    stderr: stderr as unknown as NodeJS.WritableStream,
+    mock: null,
+    clientVersion: null,
+    env: {},
+  })
+  try {
+    engine.init(KEY)
+    // Let the setImmediate bootstrap and the crashing pump iteration run.
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    assert.match(text, /pump loop stopped unexpectedly: clock exploded/)
+    assert.equal(text.match(/pump loop stopped unexpectedly/g)?.length, 1, 'logged exactly once')
+    // `stop()` must not hang waiting on a pump promise that already settled.
+    const started = Date.now()
+    await engine.stop()
+    assert.ok(Date.now() - started < 2_000)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
 })

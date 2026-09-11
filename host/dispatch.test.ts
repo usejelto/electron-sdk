@@ -240,9 +240,9 @@ test('a stop that throws still terminates', async () => {
 })
 
 test('an SDK that throws is reported on the reply, never on stderr', async () => {
-  // RFC-0001 §8.3 item 10: the SDK never throws into the host. If one does, the
-  // runner has to be able to see it -- and C10 asserts stderr is byte-empty
-  // without JELTO_DEBUG, so the reply is the only channel left.
+  // The SDK never throws into the host. If one does, the runner has to be
+  // able to see it -- and C10 asserts stderr is byte-empty without
+  // JELTO_DEBUG, so the reply is the only channel left.
   const dispatcher = createDispatcher(
     fakeSdk({
       track: () => {

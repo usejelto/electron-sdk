@@ -3,8 +3,17 @@
 
 import { createRequire } from 'node:module'
 import { release } from 'node:os'
-import { join } from 'node:path'
 import type { Debug } from './debug.ts'
+
+/**
+ * The shape this file needs from `process` (real or, in a test, a stand-in).
+ * An index signature keeps callers free to hand over an object carrying
+ * other process-like fields (`versions`, ...) without an excess-property error.
+ */
+export interface ProcessLike {
+  type?: string
+  [key: string]: unknown
+}
 
 export interface Platform {
   av: string
@@ -36,13 +45,24 @@ export function truncate32(value: string): string {
  * loads under plain `node` — which is what the conformance host runs on
  * (spec/sdk-conformance.md §5 overrides the default directory with
  * JELTO_STATE_DIR in every scenario, so this path is never taken under the
- * suite). `createRequire` rather than a bare `require`/`import.meta.url`,
- * because `build.mjs` emits both a CJS and an ESM bundle from this one source
- * and only one of those two spellings exists in each.
+ * suite).
+ *
+ * spec/sdk-conformance.md §5: "main process only". `proc.type` is Electron's
+ * own tag for which process this is (`'browser'` is the main process,
+ * `'renderer'`/`'utility'` are not); anything else -- including plain Node,
+ * where `type` is undefined -- is refused before `electron` is ever required,
+ * so a renderer or a preload script cannot walk away with main-process state.
+ *
+ * `createRequire(import.meta.url)` anchors module resolution at THIS FILE's
+ * own installed location rather than at `process.cwd()`, which a host
+ * application controls and which an attacker able to influence it could use
+ * to plant a fake `electron` package ahead of the real one on the resolution
+ * path.
  */
-export function electronApp(): { getPath?(name: string): string; getVersion?(): string } | null {
+export function electronApp(proc: ProcessLike = process as unknown as ProcessLike): { getPath?(name: string): string; getVersion?(): string } | null {
+  if (proc.type !== 'browser') return null
   try {
-    const resolve = createRequire(join(process.cwd(), 'jelto-electron-resolver.cjs'))
+    const resolve = createRequire(import.meta.url)
     const electron = resolve('electron') as { app?: { getPath?(n: string): string; getVersion?(): string } }
     return electron.app ?? null
   } catch {
@@ -71,7 +91,7 @@ export function resolveOSVersion(): string {
     const version = electronProcess.getSystemVersion?.()
     if (typeof version === 'string' && version.trim() !== '') return truncate32(version.trim())
   } catch {
-    // Swallowed: RFC-0001 §8.3 item 10.
+    // Swallowed: the SDK never throws into the host.
   }
   const kernel = release().trim()
   return truncate32(kernel === '' ? '0' : kernel)

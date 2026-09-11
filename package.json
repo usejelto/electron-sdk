@@ -23,7 +23,9 @@
     }
   },
   "files": [
-    "dist",
+    "dist/index.cjs",
+    "dist/index.mjs",
+    "dist/*.d.ts",
     "README.md",
     "LICENSE"
   ],
