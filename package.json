@@ -9,7 +9,7 @@
   "bugs": {
     "url": "https://github.com/usejelto/electron-sdk/issues"
   },
-  "homepage": "https://github.com/usejelto/electron-sdk",
+  "homepage": "https://jelto.io/docs/sdk/electron-forge",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -43,5 +43,9 @@
     "@types/node": "^24.9.2",
     "esbuild": "^0.25.0",
     "typescript": "^5.9.3"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
   }
 }
