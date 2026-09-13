@@ -12,7 +12,7 @@ export const MAX_PROP_STRING = 200
 export const MAX_REASON_CHARS = 64
 
 /** The client version follows the `electron/1.0.3` shape (spec/wire-v1.md §3). */
-export const SDK_CLIENT_VERSION = 'electron/1.0.0'
+export const SDK_CLIENT_VERSION = 'electron/1.0.1'
 
 export type PropValue = string | number | boolean
 

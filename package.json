@@ -1,7 +1,7 @@
 {
   "name": "@jelto/electron",
-  "version": "1.0.0",
-  "description": "Jelto SDK for Electron \u2014 main process only. RFC-0001 \u00a78, spec/wire-v1.md v1, spec/sdk-conformance.md.",
+  "version": "1.0.1",
+  "description": "Jelto SDK for Electron — main process only. RFC-0001 §8, spec/wire-v1.md v1, spec/sdk-conformance.md.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/usejelto/electron-sdk.git"
