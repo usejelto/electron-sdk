@@ -3,15 +3,17 @@
 Jelto analytics for Electron's main process. Requires Node.js 18 or later and has
 no native addons or runtime dependencies.
 
-## Install locally
+## Install
 
-Version 1.0.0 is prepared for release; registry publication is not yet available.
-From this package's source root, use Node.js 24 and run `npm ci` and
-`make package`. In your Electron application, install the resulting tarball:
+The package is published on npm as `@jelto/electron`; releases are tagged in
+this repository. Install it as a runtime dependency of your Electron application:
 
 ```sh
-npm install /absolute/path/to/jelto-electron-1.0.0.tgz
+npm install @jelto/electron
 ```
+
+To build from source instead, use Node.js 24 and run `npm ci` and `make package`
+from this package's source root, then install the resulting tarball.
 
 See the [Electron Forge](https://jelto.io/docs/sdk/electron-forge) or
 [Electron Vite](https://jelto.io/docs/sdk/electron-vite) integration guide for setup.
@@ -123,8 +125,7 @@ Questions, bug reports and documentation improvements are welcome. See
 [Contributing](https://github.com/usejelto/electron-sdk/blob/main/CONTRIBUTING.md),
 [Code of Conduct](https://github.com/usejelto/electron-sdk/blob/main/CODE_OF_CONDUCT.md), and
 [Security policy](https://github.com/usejelto/electron-sdk/blob/main/SECURITY.md).
-Until the public repository is available, these files are also included in the
-source root; contact [taha@jelto.io](mailto:taha@jelto.io) for help.
+Contact [taha@jelto.io](mailto:taha@jelto.io) for anything else.
 
 Jelto-owned software and associated documentation use the [MIT license](LICENSE).
 Third-party materials retain their own terms, including the Contributor Covenant
