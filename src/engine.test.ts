@@ -344,10 +344,7 @@ test('C2/C3: one heartbeat per UTC day, and the install id survives a relaunch',
     const id = first.sdk.installId()
     assert.match(id, v4)
     assert.match(first.sdk.exportState().install_id, v4)
-    // Counted rather than listed: the install delay is a RANDOM 0-6 h, so on
-    // about one run in 7 200 it lands inside a 3 s advance
-    // and joins the batch. The real C3 scenario has the same exposure and its
-    // `request_count: 2` inherits it; see the report.
+    // The immediate install shares the first batch; count only the daily heartbeat.
     assert.equal(heartbeats(mock), 1)
     await first.sdk.stop()
 
@@ -390,18 +387,20 @@ test('C15/C15b: `t` reaches the wire as the host clock says, uncorrected', async
   }
 })
 
-test('C4/C4c: one install, delayed 0-6 h, resumed rather than redrawn, claimed on the 202', async () => {
+test('C4/C4c: one install, enqueued immediately, resumed rather than redrawn, claimed on the 202', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'jelto-engine-'))
   const mock = await Mock.start()
   try {
-    // C4c: the process ends before the delay elapses.
+    // C4c: the process ends before the initial flush.
     const first = makeSdk(dir, mock, { JELTO_NOW: String(1788134400000) })
     first.sdk.init(KEY)
     await first.sdk.advance(0)
     const dueAt = first.sdk.exportState().install_due_at
-    assert.ok(dueAt !== undefined)
-    const offset = BigInt(dueAt) - 1788134400000n
-    assert.ok(offset >= 0n && offset < 21_600_000n, dueAt)
+    assert.equal(dueAt, '1788134400000')
+    const queued = first.sdk.exportState().queue.events.filter((event) => event.n === 'install')
+    assert.equal(queued.length, 1)
+    assert.equal(queued[0]!.t, '1788134400000')
+    assert.equal(first.sdk.exportState().install_claimed, false)
     await first.sdk.stop()
 
     // A relaunch seven hours later RESUMES that deadline.
@@ -450,9 +449,10 @@ test('C7: a batch is capped at 100 events, and the queue drains in order', async
     assert.equal(mock.requests.length, 3)
     assert.equal(mock.requests[0]?.events.length, 100)
     assert.equal(mock.requests[1]?.events.length, 100)
-    assert.equal(mock.requests[2]?.events.length, 51) // 250 tracks + the heartbeat
+    assert.equal(mock.requests[2]?.events.length, 52) // 250 tracks + the heartbeat + the install
     assert.equal(mock.requests[0]?.names[0], 'heartbeat')
-    assert.equal(mock.requests[2]?.names.at(-1), 'x249')
+    assert.deepEqual(mock.requests.flatMap((r) => r.names).filter((name) => name.startsWith('x')),
+      Array.from({ length: 250 }, (_, i) => `x${i}`))
   })
 })
 
@@ -465,7 +465,7 @@ test('C9: a 400 is final — one request with x, and y in a fresh batch', async 
     rig.sdk.track('y')
     await rig.sdk.advance(6_000)
     assert.equal(mock.requests.length, 2)
-    assert.deepEqual(mock.requests[0]?.names, ['heartbeat', 'x'])
+    assert.deepEqual(mock.requests[0]?.names, ['heartbeat', 'x', 'install'])
     assert.deepEqual(mock.requests[1]?.names, ['y'])
     assert.equal(rig.sdk.exportState().backoff_step_ms, undefined)
   })
@@ -480,7 +480,7 @@ test('C9b: a 402 is final too — no retry, no backoff loop, and one line names 
     rig.sdk.track('y')
     await rig.sdk.advance(6_000)
     assert.equal(mock.requests.length, 2)
-    assert.deepEqual(mock.requests.flatMap((r) => r.names), ['heartbeat', 'x', 'y'])
+    assert.deepEqual(mock.requests.flatMap((r) => r.names), ['heartbeat', 'x', 'install', 'y'])
     assert.equal(rig.sdk.exportState().backoff_step_ms, undefined)
     assert.ok(rig.stderr().includes('payment_required'), rig.stderr())
   })
@@ -498,7 +498,7 @@ test('C8: a retryable refusal resends the SAME batch with the SAME ids', async (
     const state = rig.sdk.exportState()
     assert.equal(state.backoff_step_ms, 2_000)
     assert.ok(state.backoff_next_at !== undefined)
-    assert.equal(state.queue.events.length, 2)
+    assert.equal(state.queue.events.length, 3)
     // Past the deadline, the identical batch goes out again.
     await rig.sdk.advance(4_000)
     assert.ok(mock.requests.length >= 2)
@@ -533,7 +533,7 @@ test('C16: the switch pauses, then ONE heartbeat alone, then the queue drains', 
   await withRig(async (rig, mock) => {
     const now = 1788134400000
     rig.sdk.init(KEY)
-    // Seven simulated hours put the install out of the way for good.
+    // Retain C16's clock advance; the initial flush accepts the immediate install.
     await rig.sdk.advance(25_200_000)
     assert.equal(mock.requests.length, 1)
 
@@ -587,7 +587,7 @@ test('C16b: an app SDK ignores a stop scoped to web', async () => {
     rig.sdk.track('y')
     await rig.sdk.advance(6_000)
     assert.equal(mock.requests.length, 2)
-    assert.deepEqual(mock.requests.flatMap((r) => r.names), ['heartbeat', 'y'])
+    assert.deepEqual(mock.requests.flatMap((r) => r.names), ['heartbeat', 'install', 'y'])
     assert.equal(rig.sdk.exportState().stop_until, undefined)
     assert.ok(rig.stderr().includes('ignoring a stop scoped to web'), rig.stderr())
   })
@@ -631,7 +631,7 @@ test('C20: onboarding IS track, and its event is congruent with the sugar-free c
     await rig.sdk.advance(6_000)
     const events = mock.requests[0]!.events
     assert.deepEqual(mock.requests[0]!.names, [
-      'heartbeat', 'onboarding:permissions', 'onboarding:driver', 'onboarding:tour', 'onboarding:permissions',
+      'heartbeat', 'onboarding:permissions', 'onboarding:driver', 'onboarding:tour', 'onboarding:permissions', 'install',
     ])
     assert.deepEqual(events[1]?.['props'], { status: 'ok' })
     assert.deepEqual(events[2]?.['props'], { status: 'fail', reason: 'no_kext' })
@@ -661,7 +661,7 @@ test('C20b/W2/W3/C22c: every client-side drop keeps its event off the wire', asy
     rig.sdk.setProps({ license: 'a'.repeat(30) })
     rig.sdk.track('good_name')
     await rig.sdk.advance(6_000)
-    assert.deepEqual(mock.requests.flatMap((r) => r.names), ['heartbeat', 'good_name'])
+    assert.deepEqual(mock.requests.flatMap((r) => r.names), ['heartbeat', 'good_name', 'install'])
     // C22c: neither reached the wire, and no change means no extra heartbeat.
     assert.equal(mock.requests[0]?.events[0]?.['props'], undefined)
     assert.equal(mock.requests.length, 1)
@@ -749,6 +749,7 @@ test('spec/sdk-conformance.md §3.2: the export carries these keys and no others
       'backoff_step_ms',
       'install_claimed',
       'install_due_at',
+      'install_first_try',
       'install_id',
       'install_props',
       'last_heartbeat_day',

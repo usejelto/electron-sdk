@@ -10,7 +10,7 @@
 #     no arguments (spec/conformance/runner/hostproc.go, StartHost). A Node
 #     entry point is `node <file>`, which that call cannot express, so the
 #     argument has to live on this side of it. `exec` replaces this shell, so
-#     node keeps THIS pid: C4c's mid-delay kill (hostproc.go, Kill) reaches the
+#     node keeps THIS pid: C4c's pre-flush kill (hostproc.go, Kill) reaches the
 #     process that holds the SDK and not a parent that would leave it orphaned.
 #
 #  2. dist/ is a build product (.gitignore) and the runner needs a stable path.

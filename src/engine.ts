@@ -42,9 +42,7 @@ import {
 export const INIT_FLUSH_DELAY_MS = 2_000
 /** Every track call debounces the flush by 5 s. */
 export const TRACK_DEBOUNCE_MS = 5_000
-/** The install claim waits a random 0-6 h after init. */
-export const INSTALL_MAX_DELAY_MS = 6 * 60 * 60 * 1000
-/** Or the install claim goes out after 30 days of attempts, whichever comes first. */
+/** Mark the install claimed after 30 days of attempts if no 202 has arrived. */
 export const INSTALL_CLAIM_AFTER_MS = 30 * 24 * 60 * 60 * 1000
 /**
  * Bounds the termination flush, which is best effort on app background or
@@ -259,7 +257,7 @@ export class Engine {
       state.last_app_version = this.platform?.observedVersion ?? ''
       state.install_id = id
       state.install_claimed = false
-      state.install_due_at = (now + BigInt(randomInstallDelay())).toString()
+      state.install_due_at = now.toString()
       state.install_first_try = ''
       state.last_heartbeat_day = ''
     })) return
@@ -411,7 +409,7 @@ export class Engine {
       if (!INSTALL_ID_SHAPE.test(state.install_id) || state.install_id === NIL_UUID) state.install_id = uuidV4()
       // Persist the install schedule once so relaunch does not redraw its deadline (C4c).
       if (!state.install_claimed && state.install_due_at === '') {
-        state.install_due_at = (now + BigInt(randomInstallDelay())).toString()
+        state.install_due_at = now.toString()
       }
     })
 
@@ -560,7 +558,8 @@ export class Engine {
       })
       this.installEnqueuedThisRun = true
       this.enqueue({ id: uuidV7(now), n: 'install', t: now.toString() })
-      this.pending = true
+      // Queue immediately while preserving the two-second initial flush (C7).
+      if (this.initFlushAt === null) this.pending = true
       return { next: null, acted: true }
     }
 
@@ -899,11 +898,6 @@ function sameProps(a: Record<string, string>, b: Record<string, string>): boolea
   const keys = Object.keys(a)
   if (keys.length !== Object.keys(b).length) return false
   return keys.every((key) => a[key] === b[key])
-}
-
-/** The install delay is RANDOM, with no seed knob (spec/sdk-conformance.md §3.1). */
-function randomInstallDelay(): number {
-  return Math.floor(Math.random() * INSTALL_MAX_DELAY_MS)
 }
 
 function realSleep(millis: number): Promise<void> {

@@ -21,7 +21,7 @@ export interface PersistedState {
   /** UTC day index, decimal (C3). */
   last_heartbeat_day: string
   install_claimed: boolean
-  /** The install's random 0-6 h delay, a DEADLINE and not a countdown (C4c). */
+  /** The immediate install deadline, persisted at the draw instant and resumed on relaunch (C4c). */
   install_due_at: string
   /** The "after 30 days of attempts" claim has to be measured from something (C4b). */
   install_first_try: string
