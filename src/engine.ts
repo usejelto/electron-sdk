@@ -30,11 +30,13 @@ import {
   gateInstallProps,
   gateOnboarding,
   gateTrackProps,
+  installOrigin,
   MAX_EVENTS_PER_REQUEST,
   parseResponse,
   withinPropCap,
   type EncodeContext,
   type PropValue,
+  type InstallOrigin,
   type QueuedEvent,
 } from './wire.ts'
 
@@ -64,6 +66,7 @@ export interface StateExport {
   last_app_version?: string
   last_heartbeat_day?: string
   install_claimed: boolean
+  install_origin?: InstallOrigin
   install_due_at?: string
   install_first_try?: string
   install_props?: Record<string, string>
@@ -126,6 +129,7 @@ export class Engine {
   private observationComplete = false
   private stagedUpdate: QueuedEvent | null = null
   private installEnqueuedThisRun = false
+  private origin: InstallOrigin = 'unknown'
 
   private initFlushAt: bigint | null = null
   private trackFlushAt: bigint | null = null
@@ -161,7 +165,7 @@ export class Engine {
    * happens once — except after `disable()`, whose "no-ops UNTIL THE NEXT
    * INIT" contract re-arms it.
    */
-  init(key: string, app?: string, endpoint?: string): void {
+  init(key: string, app?: string, endpoint?: string, origin?: InstallOrigin): void {
     if (this.started && !this.disabled) return
     const normalizedKey = typeof key === 'string' ? key : String(key)
     // spec/wire-v1.md §2: a key outside the grammar is refused outright, not
@@ -185,6 +189,7 @@ export class Engine {
     this.key = normalizedKey
     this.booted = false
     this.slug = gateAppSlug(app, this.log)
+    this.origin = installOrigin(origin)
     setImmediate(() => {
       this.ensureBootstrapped()
       if (reArm) this.notify()
@@ -251,12 +256,13 @@ export class Engine {
     if (!this.ready()) return
     const now = this.clock.now()
     const id = uuidV4()
-    if (!this.queue.discardUpdates()) return
+    if (!this.queue.discardIdentityEvents()) return
     if (!this.store.commit((state) => {
       delete state.pending_update
       state.last_app_version = this.platform?.observedVersion ?? ''
       state.install_id = id
       state.install_claimed = false
+      state.install_origin = 'unknown'
       state.install_due_at = now.toString()
       state.install_first_try = ''
       state.last_heartbeat_day = ''
@@ -303,6 +309,7 @@ export class Engine {
     if (state.last_heartbeat_day !== '') output.last_heartbeat_day = state.last_heartbeat_day
     if (state.last_app_version !== '') output.last_app_version = state.last_app_version
     if (state.install_due_at !== '') output.install_due_at = state.install_due_at
+    if (state.install_origin !== undefined) output.install_origin = state.install_origin
     if (state.install_first_try !== '') output.install_first_try = state.install_first_try
     if (Object.keys(state.install_props).length > 0) output.install_props = { ...state.install_props }
     if (state.backoff_step_ms !== 0) output.backoff_step_ms = state.backoff_step_ms
@@ -406,7 +413,10 @@ export class Engine {
     this.stagedUpdate = null
 
     this.store.update((state) => {
-      if (!INSTALL_ID_SHAPE.test(state.install_id) || state.install_id === NIL_UUID) state.install_id = uuidV4()
+      if (!INSTALL_ID_SHAPE.test(state.install_id) || state.install_id === NIL_UUID) {
+        state.install_id = uuidV4()
+        state.install_origin = this.origin
+      }
       // Persist the install schedule once so relaunch does not redraw its deadline (C4c).
       if (!state.install_claimed && state.install_due_at === '') {
         state.install_due_at = now.toString()
@@ -557,7 +567,9 @@ export class Engine {
         if (next.install_first_try === '') next.install_first_try = now.toString()
       })
       this.installEnqueuedThisRun = true
-      this.enqueue({ id: uuidV7(now), n: 'install', t: now.toString() })
+      this.enqueue({ id: uuidV7(now), n: 'install', t: now.toString(),
+        ...(state.install_origin === undefined ? {} : { props: { install_origin: state.install_origin } }),
+      })
       // Queue immediately while preserving the two-second initial flush (C7).
       if (this.initFlushAt === null) this.pending = true
       return { next: null, acted: true }

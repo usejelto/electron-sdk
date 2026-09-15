@@ -4,14 +4,15 @@
 import { tokenize } from './tokenize.ts'
 import { parseProps, type PropValue } from './props.ts'
 import type { Reply } from './reply.ts'
+import { installOrigin, type InstallOrigin } from '../src/wire.ts'
 
 export type { PropValue }
 
 /**
  * What the host needs of the SDK. It is a structural subset of the
- * `ConformanceSdk` that `src/index.ts` exports, declared here so
- * that this module -- and its tests -- do not depend on the SDK half of the
- * package; `main.ts` is where the two are joined, and `tsc -p
+ * `ConformanceSdk` that `src/index.ts` exports. Origin parsing is shared with
+ * the SDK so the wrapper cannot classify an installation differently.
+ * `main.ts` is where the two are joined, and `tsc -p
  * tsconfig.host.json` is what checks that the real one still satisfies it.
  *
  * `exportState` returns `unknown` deliberately. §3.2 lets the host "re-encode
@@ -19,7 +20,7 @@ export type { PropValue }
  * knowing the shape: it cannot then complete, default or repair it.
  */
 export interface HostSdk {
-  init(key: string, app?: string): void
+  init(key: string, app?: string, endpoint?: string, origin?: InstallOrigin): void
   track(name: string, props?: Record<string, PropValue>): void
   onboarding(step: string, status: string, reason?: string): void
   setProps(props: Record<string, PropValue>): void
@@ -49,6 +50,7 @@ export interface DispatcherOptions {
   nowNs?: () => bigint
   /** Bytes of heap in use. */
   heapUsed?: () => number
+  installOrigin?: string
 }
 
 const USAGE_UNKNOWN =
@@ -120,7 +122,8 @@ export function createDispatcher(sdk: HostSdk, options: DispatcherOptions = {}):
         }
         const app = tokens[2]
         const started = nowNs()
-        sdk.init(key, app)
+        if (options.installOrigin === undefined) sdk.init(key, app)
+        else sdk.init(key, app, undefined, installOrigin(options.installOrigin))
         // C1's "init returns in < 5 ms (host measures)". Truncated to whole
         // microseconds as refhost's `time.Since(...).Microseconds()` is.
         const us = Number((nowNs() - started) / 1000n)

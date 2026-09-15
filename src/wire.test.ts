@@ -37,6 +37,25 @@ const ctx: EncodeContext = {
   installProps: {},
 }
 
+test('legacy heartbeat properties cannot leak the reserved install origin', () => {
+  const saved = { license: 'paid', install_origin: 'existing' }
+  const event = encodeEvent({ id: ctx.installID, n: 'heartbeat', t: '0', hb: true }, { ...ctx, installProps: saved })
+  assert.deepEqual(JSON.parse(event!).props, { license: 'paid' })
+  assert.equal(saved.install_origin, 'existing', 'encoding does not mutate stored state')
+})
+
+test('track accepts the reserved origin only on install with a valid coarse value', () => {
+  const { log } = sink()
+  for (const origin of ['new', 'existing', 'unknown']) {
+    assert.equal(gateTrackProps({ install_origin: origin }, 'install', log), true)
+    assert.equal(gateTrackProps({ install_origin: origin }, 'custom', log), false)
+    assert.equal(gateTrackProps({ install_origin: origin }, 'heartbeat', log), false)
+  }
+  for (const origin of ['', 'New', '2020-01-01', false, 42]) {
+    assert.equal(gateTrackProps({ install_origin: origin }, 'install', log), false)
+  }
+})
+
 test('C15b: both instants reach the body bytes as bare JSON number literals', () => {
   for (const literal of ['99999999999999999999', '-14256000000', '0', '2103753600000']) {
     const event = encodeEvent({ id: ctx.installID, n: 'heartbeat', t: literal, hb: true }, ctx)

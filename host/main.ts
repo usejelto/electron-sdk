@@ -60,7 +60,7 @@ const sdk = build(process.env)
 process.stdout.on('error', () => {})
 process.stderr.on('error', () => {})
 
-const dispatcher = createDispatcher(sdk)
+const dispatcher = createDispatcher(sdk, { installOrigin: process.env['JELTO_INSTALL_ORIGIN'] })
 
 // readline's async iterator pauses the stream while the loop body is awaited,
 // which is the property that matters: `sleep 25200000` must not have the next

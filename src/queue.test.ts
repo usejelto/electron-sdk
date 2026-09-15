@@ -59,7 +59,7 @@ test('a reset queue checkpoint retains the receipt until the old state intent is
     const queue = new EventQueue(dir, join(dir, 'queue.jsonl'))
     const update = event('app_updated')
     assert.equal(queue.recover(update), true)
-    assert.equal(queue.discardUpdates(), true)
+    assert.equal(queue.discardIdentityEvents(), true)
     // Reset can fail its subsequent state commit or crash before retiring the intent.
     queue.load()
     assert.equal(queue.recover(update), true)

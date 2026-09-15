@@ -185,8 +185,8 @@ export class EventQueue {
     return false
   }
 
-  discardUpdates(): boolean {
-    const next = this.entries.filter((entry) => entry.event.n !== 'app_updated')
+  discardIdentityEvents(): boolean {
+    const next = this.entries.filter((entry) => entry.event.n !== 'app_updated' && entry.event.n !== 'install')
     const contents = this.receiptLine() + next.map((entry) => `${entry.line}\n`).join('')
     if (!atomicWrite(this.path, contents)) return false
     this.entries = next

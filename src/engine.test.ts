@@ -134,6 +134,83 @@ async function withRig(
 const KEY = 'prd_conform001'
 const DAY = 86_400_000
 
+test('install origin is optional host knowledge and never a heartbeat property', async () => {
+  for (const origin of [undefined, 'new', 'existing', 'unknown', 'invalid'] as const) {
+    await withRig(async ({ sdk }, mock) => {
+      sdk.init(KEY, undefined, undefined, origin as 'new' | 'existing' | 'unknown' | undefined)
+      sdk.setProps({ license: 'paid', install_origin: 'new' })
+      await sdk.advance(3000)
+      const events = mock.requests.flatMap(r => r.events)
+      const expected = origin === 'new' || origin === 'existing' ? origin : 'unknown'
+      assert.equal(sdk.exportState().install_origin, expected)
+      assert.deepEqual(events.find(e => e['n'] === 'install')?.['props'], { install_origin: expected })
+      assert.deepEqual(events.find(e => e['n'] === 'heartbeat')?.['props'], { license: 'paid' })
+      sdk.disable()
+    })
+  }
+})
+
+test('pending install origin and its retry survive relaunch with a different host hint', async () => {
+  await withRig(async (rig, mock) => {
+    mock.always({ status: 503, retryAfter: '10' })
+    rig.sdk.init(KEY, undefined, undefined, 'existing')
+    await rig.sdk.advance(3000)
+    const original = mock.requests[0]!.body
+    const id = rig.sdk.installId()
+    await rig.sdk.stop()
+    const next = makeSdk(rig.dir, mock, { JELTO_NOW: '1788134403000' }).sdk
+    try {
+      next.init(KEY, undefined, undefined, 'new')
+      assert.equal(next.installId(), id)
+      assert.equal(next.exportState().install_origin, 'existing')
+      mock.always({ status: 202 })
+      await next.advance(15_000)
+      assert.equal(mock.requests.at(-1)!.body, original)
+      assert.equal(next.exportState().install_claimed, true)
+      next.init(KEY, undefined, undefined, 'new')
+      assert.equal(next.exportState().install_origin, 'existing')
+      next.disable()
+    } finally { await next.stop() }
+  })
+})
+
+test('legacy pending claims keep omission instead of taking a later initialization hint', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'jelto-legacy-origin-'))
+  try {
+    new Store(dir).update(state => {
+      state.install_id = '3f1b6c3e-0f2a-4d55-9b21-2f5c0f6a1234'
+      state.install_due_at = '0'
+    })
+    await withRig(async ({ sdk }, mock) => {
+      sdk.init(KEY, undefined, undefined, 'new')
+      await sdk.advance(3000)
+      assert.equal(sdk.exportState().install_origin, undefined)
+      assert.equal(mock.requests.flatMap(r => r.events).find(e => e['n'] === 'install')?.['props'], undefined)
+      sdk.disable()
+    }, { JELTO_NOW: '0' }, { dir })
+  } finally { rmSync(dir, { recursive: true, force: true }) }
+})
+
+test('reset replaces pending origin with unknown; disable and init accepts a fresh host hint', async () => {
+  await withRig(async ({ sdk }, mock) => {
+    sdk.init(KEY, undefined, undefined, 'existing')
+    await sdk.advance(0)
+    const previous = sdk.installId()
+    sdk.reset()
+    assert.notEqual(sdk.installId(), previous)
+    assert.equal(sdk.exportState().install_origin, 'unknown')
+    await sdk.advance(3000)
+    const installs = mock.requests.flatMap(r => r.events).filter(e => e['n'] === 'install')
+    assert.equal(installs.length, 1)
+    assert.deepEqual(installs[0]?.['props'], { install_origin: 'unknown' })
+    sdk.disable()
+    sdk.init(KEY, undefined, undefined, 'new')
+    await sdk.advance(3000)
+    assert.deepEqual(mock.requests.flatMap(r => r.events).filter(e => e['n'] === 'install').at(-1)?.['props'], { install_origin: 'new' })
+    sdk.disable()
+  })
+})
+
 test('scheduled install flushes after the init flush and final refusals do not regenerate it', async () => {
   for (const status of [202, 400, 402, 503]) {
     const dir = mkdtempSync(join(tmpdir(), 'jelto-install-deadline-'))
@@ -411,9 +488,10 @@ test('C4/C4c: one install, enqueued immediately, resumed rather than redrawn, cl
     const installs = mock.requests.flatMap((r) => r.names).filter((n) => n === 'install')
     assert.deepEqual(installs, ['install'])
     assert.equal(second.sdk.exportState().install_claimed, true)
-    // The install carries no attribution payload of any kind.
+    // The install carries only the coarse origin, with no attribution payload.
     const event = mock.requests.flatMap((r) => r.events).find((e) => e['n'] === 'install')
-    assert.deepEqual(Object.keys(event ?? {}).sort(), ['arch', 'av', 'id', 'iid', 'n', 'os', 'osv', 's', 't', 'v'])
+    assert.deepEqual(Object.keys(event ?? {}).sort(), ['arch', 'av', 'id', 'iid', 'n', 'os', 'osv', 'props', 's', 't', 'v'])
+    assert.deepEqual(event?.['props'], { install_origin: 'unknown' })
     await second.sdk.stop()
 
     // A further init sends no second install.
@@ -751,6 +829,7 @@ test('spec/sdk-conformance.md §3.2: the export carries these keys and no others
       'install_due_at',
       'install_first_try',
       'install_id',
+      'install_origin',
       'install_props',
       'last_heartbeat_day',
       'queue',

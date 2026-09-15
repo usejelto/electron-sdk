@@ -4,7 +4,7 @@
 import { readFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { atomicWrite } from './atomic.ts'
-import type { QueuedEvent } from './wire.ts'
+import { installOrigin, type InstallOrigin, type QueuedEvent } from './wire.ts'
 
 /**
  * Every filesystem entry this SDK, across `store.ts`, `queue.ts` and
@@ -21,6 +21,8 @@ export interface PersistedState {
   /** UTC day index, decimal (C3). */
   last_heartbeat_day: string
   install_claimed: boolean
+  /** Absent in legacy state; an omission must never adopt a later init hint. */
+  install_origin?: InstallOrigin
   /** The immediate install deadline, persisted at the draw instant and resumed on relaunch (C4c). */
   install_due_at: string
   /** The "after 30 days of attempts" claim has to be measured from something (C4b). */
@@ -91,6 +93,7 @@ export class Store {
         last_heartbeat_day:
           typeof parsed.last_heartbeat_day === 'string' ? parsed.last_heartbeat_day : base.last_heartbeat_day,
         install_claimed: parsed.install_claimed === true,
+        install_origin: parsed.install_origin === undefined ? undefined : installOrigin(parsed.install_origin),
         install_due_at: typeof parsed.install_due_at === 'string' ? parsed.install_due_at : base.install_due_at,
         install_first_try:
           typeof parsed.install_first_try === 'string' ? parsed.install_first_try : base.install_first_try,

@@ -69,6 +69,14 @@ test('init without a slug passes none', async () => {
   assert.deepEqual(sdk.calls[0], { method: 'init', args: ['prd_conform001', undefined] })
 })
 
+test('conformance origin hint is passed through the public init option', async () => {
+  let received: unknown[] = []
+  const sdk = fakeSdk({ init: (...args) => { received = args } })
+  const dispatcher = createDispatcher(sdk, { installOrigin: 'existing' })
+  await dispatcher.dispatch('init prd_conform001 desktop')
+  assert.deepEqual(received, ['prd_conform001', 'desktop', undefined, 'existing'])
+})
+
 test('a command missing its argument is refused with its usage', async () => {
   const sdk = fakeSdk()
   const dispatcher = createDispatcher(sdk)

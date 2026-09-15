@@ -5,10 +5,10 @@ import { Engine, type StateExport } from './engine.ts'
 import { resolveEndpoint } from './endpoint.ts'
 import { parseInstant } from './instant.ts'
 import { electronApp } from './platform.ts'
-import { gateClientVersion, type PropValue } from './wire.ts'
+import { gateClientVersion, type InstallOrigin, type PropValue } from './wire.ts'
 
 export type { StateExport } from './engine.ts'
-export type { PropValue } from './wire.ts'
+export type { InstallOrigin, PropValue } from './wire.ts'
 
 /** The Jelto SDK's whole public surface. No other public API in v1. */
 export interface Jelto {
@@ -19,7 +19,7 @@ export interface Jelto {
    * integration wants: a REQUIRED endpoint is one more thing every integration
    * can get wrong, and getting it wrong is silent.
    */
-  init(key: string, app?: string, endpoint?: string): void
+  init(key: string, app?: string, endpoint?: string, installOrigin?: InstallOrigin): void
   track(name: string, props?: Record<string, PropValue>): void
   onboarding(step: string, status: string, reason?: string): void
   setProps(props: Record<string, PropValue>): void
@@ -134,8 +134,8 @@ function instance(): ConformanceSdk {
 
 /** The singleton a customer links: `import jelto from '@jelto/electron'`. */
 const jelto: Jelto = {
-  init(key: string, app?: string, endpoint?: string): void {
-    instance().init(key, app, endpoint)
+  init(key: string, app?: string, endpoint?: string, installOrigin?: InstallOrigin): void {
+    instance().init(key, app, endpoint, installOrigin)
   },
   track(name: string, props?: Record<string, PropValue>): void {
     instance().track(name, props)

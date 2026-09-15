@@ -36,6 +36,23 @@ Call `init` once after your app decides telemetry may start. Before initializati
 other calls do nothing and the SDK creates no files or sockets. The optional
 second argument is your registered app slug; when omitted, the OS is reported.
 
+For an app that already has users, the optional fourth argument supplies coarse
+host knowledge about this installation (the third argument is an endpoint):
+
+```ts
+jelto.init('prd_xxxxxxxxxx', 'mac', undefined, 'existing')
+```
+
+`installOrigin` accepts `'new'`, `'existing'`, or `'unknown'` (the default).
+Read your app's saved first-launch or onboarding state before changing it. Use
+`new` only when the host knows this is the app installation's first launch;
+an incomplete onboarding flag alone does not prove that. No date is transmitted.
+The first claim persists this choice and sends it only as `install`'s
+`props.install_origin`. Relaunches, retries and later init hints cannot change it;
+legacy claims with no signal remain unknown. `setProps` cannot set this reserved
+property. Identity reset starts an unknown claim; disable followed by init captures
+the new explicit hint. See [adopting Jelto with existing users](https://jelto.io/docs/start/existing-app).
+
 Each authorized initialization observes `app.getVersion()`. After the first known
 version establishes a baseline, a different version automatically queues
 `app_updated` with `from_version` and `to_version`, keeping the same install ID.

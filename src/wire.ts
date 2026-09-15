@@ -16,6 +16,12 @@ export const SDK_CLIENT_VERSION = 'electron/1.0.1'
 
 export type PropValue = string | number | boolean
 
+/** Host knowledge at the first claim, never inferred from the SDK identity. */
+export type InstallOrigin = 'new' | 'existing' | 'unknown'
+export function installOrigin(value: unknown): InstallOrigin {
+  return value === 'new' || value === 'existing' ? value : 'unknown'
+}
+
 /**
  * What the queue holds. Only what cannot be recomputed at send time: §4 says a
  * `heartbeat` "carries the app's CURRENT values every time", so install
@@ -85,6 +91,12 @@ export function gateTrackProps(props: Record<string, PropValue> | undefined, eve
   if (props === undefined || props === null) return true
   if (typeof props !== 'object' || Array.isArray(props)) {
     log.log(`drop event ${Debug.display(eventName)}: props must be an object; spec/wire-v1.md §3`)
+    return false
+  }
+  const origin = props['install_origin']
+  if ('install_origin' in props && (eventName !== 'install' ||
+    (origin !== 'new' && origin !== 'existing' && origin !== 'unknown'))) {
+    log.log('drop event: install_origin is reserved for install and must be new, existing or unknown')
     return false
   }
   const keys = Object.keys(props).sort(byUTF8Bytes)
@@ -176,6 +188,10 @@ export function gateInstallProps(raw: Record<string, PropValue>, log: Debug): Re
     return accepted
   }
   for (const key of Object.keys(raw).sort(byUTF8Bytes)) {
+    if (key === 'install_origin') {
+      log.log('drop install_origin: reserved for the install claim initialization option')
+      continue
+    }
     const value = raw[key]
     if (typeof value !== 'string') {
       log.log(
@@ -287,6 +303,7 @@ export function encodeEvent(event: QueuedEvent, ctx: EncodeContext): string | nu
   if (ctx.clientVersion !== null && ctx.clientVersion !== '') out += `,"v":${JSON.stringify(ctx.clientVersion)}`
 
   const chosen: Record<string, PropValue> = event.hb === true ? { ...ctx.installProps } : (event.props ?? {})
+  if (event.hb === true) delete chosen['install_origin']
   if (Object.keys(chosen).length > 0) out += `,"props":${encodeProps(chosen)}`
   out += '}'
   return out
