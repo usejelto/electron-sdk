@@ -23,7 +23,7 @@ See the [Electron Forge](https://jelto.io/docs/sdk/electron-forge) or
 ```ts
 import jelto from '@jelto/electron'
 
-jelto.init('prd_xxxxxxxxxx', 'mac')
+jelto.init('YOUR_PRODUCT_ID', 'mac', undefined, 'new')
 jelto.setProps({ license: 'paid' })
 jelto.track('export_finished', { fmt: 'wav' })
 jelto.onboarding('permissions', 'ok')
@@ -32,21 +32,30 @@ jelto.reset()
 jelto.disable()
 ```
 
+The fourth argument, `'new'`, is for an app that had no users before Jelto;
+otherwise see the [existing-app guide](https://jelto.io/docs/start/existing-app).
+
+Replace `YOUR_PRODUCT_ID` with your product ID (for example `prd_8f3kq2m9x1`).
 Call `init` once after your app decides telemetry may start. Before initialization,
 other calls do nothing and the SDK creates no files or sockets. The optional
 second argument is your registered app slug; when omitted, the OS is reported.
+The optional third argument is a custom endpoint; `undefined` uses the default.
 
-For an app that already has users, the optional fourth argument supplies coarse
-host knowledge about this installation (the third argument is an endpoint):
+For an app that already has users, derive the fourth argument for each
+installation from your app's saved state:
 
 ```ts
-jelto.init('prd_xxxxxxxxxx', 'mac', undefined, 'existing')
+jelto.init('YOUR_PRODUCT_ID', 'mac', undefined, installOrigin)
 ```
 
-`installOrigin` accepts `'new'`, `'existing'`, or `'unknown'` (the default).
-Read your app's saved first-launch or onboarding state before changing it. Use
-`new` only when the host knows this is the app installation's first launch;
-an incomplete onboarding flag alone does not prove that. No date is transmitted.
+`installOrigin` accepts `'new'`, `'existing'`, or `'unknown'`; omitting it sends
+`unknown`. Retention, onboarding and license-conversion reports count only
+installations marked `new`. Read your app's saved first-launch or onboarding
+state before changing it. Use `existing` when that state shows the installation
+predates Jelto, `new` only when the host knows this is the app installation's
+first launch (an incomplete onboarding flag alone does not prove that), and
+`unknown` when unsure. Never hardcode one value for every installation of an
+existing app. No date is transmitted.
 The first claim persists this choice and sends it only as `install`'s
 `props.install_origin`. Relaunches, retries and later init hints cannot change it;
 legacy claims with no signal remain unknown. `setProps` cannot set this reserved
@@ -77,7 +86,7 @@ import jelto from '@jelto/electron'
 
 app.whenReady().then(() => {
   if (userAgreedToTelemetry()) {
-    jelto.init('prd_xxxxxxxxxx', 'mac')
+    jelto.init('YOUR_PRODUCT_ID', 'mac', undefined, 'new')
   }
 })
 ```
@@ -91,6 +100,12 @@ the entire directory for isolated tests.
 
 Set `JELTO_DEBUG=1` to print every outgoing payload and rejection reason to stderr.
 Without it, SDK stderr remains empty.
+
+## Verify it works
+
+1. Start the app with `JELTO_DEBUG=1` in its environment (for example `JELTO_DEBUG=1 npm start`); payloads print to stderr on lines starting with `jelto:`. Leave it unset in shipped builds.
+2. Let the app call `init` and keep it open for about 10 seconds.
+3. In the Jelto dashboard, open **Settings → Installation → Apps**; your app shows **Receiving app activity**.
 
 ## Development and conformance
 

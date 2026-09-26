@@ -55,7 +55,7 @@ export const TERMINATION_BUDGET_MS = 600
 /** One `advance` in REAL time, however many barriers it takes. */
 export const SETTLE_BUDGET_MS = 30_000
 
-/** spec/wire-v1.md §2: a product key's whole legal grammar. */
+/** spec/wire-v1.md §2: a product ID's whole legal grammar. */
 export const PRODUCT_KEY_SHAPE = /^prd_[a-z0-9]{10}$/
 /** This SDK's own `install_id`: a canonical, lowercase, hyphenated UUID. */
 const INSTALL_ID_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
