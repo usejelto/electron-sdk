@@ -137,7 +137,7 @@ repeated after minor wire additions. C11's memory budget remains unmet for Elect
 see the contracts [conformance notes](https://github.com/usejelto/contracts/blob/main/spec/conformance/TODO.md) §7.
 
 Run development commands from this SDK directory. For shared conformance, set
-`JELTO_CONTRACTS_DIR` to an extracted Jelto contracts **0.1.6** archive and run
+`JELTO_CONTRACTS_DIR` to an extracted Jelto contracts **0.1.7** archive and run
 `make conformance` twice. The archive contains the runner, mock server and schema;
 the backend checkout is not needed. `make test` runs type, SDK and host checks,
 and `make package` produces the npm tarball.
