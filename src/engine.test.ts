@@ -446,6 +446,53 @@ test('C2/C3: one heartbeat per UTC day, and the install id survives a relaunch',
   }
 })
 
+test('C3b: a running SDK sends the new UTC day\'s heartbeat without another init or exit', async () => {
+  await withRig(async ({ sdk }, mock) => {
+    sdk.init(KEY)
+    await sdk.advance(3_000)
+    assert.equal(mock.requests.length, 1)
+    await sdk.advance(DAY)
+    assert.equal(mock.requests.length, 2)
+    assert.deepEqual(mock.requests[1]!.names, ['heartbeat'])
+    assert.ok(mock.requests[1]!.body.includes('1788220803000'))
+    assert.equal(sdk.exportState().last_heartbeat_day, '20697')
+    await sdk.advance(3_000)
+    assert.equal(mock.requests.length, 2)
+  })
+})
+
+test('C3b: a real-clock wait re-reads the wall clock within a minute, however far its deadline', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  const dir = mkdtempSync(join(tmpdir(), 'jelto-engine-park-'))
+  const stderr = { write: (): boolean => true } as unknown as NodeJS.WritableStream
+  const engine = new Engine({
+    endpoint: 'https://example.invalid/v1/e',
+    stateDir: dir,
+    clock: new Clock(null),
+    log: new Debug(stderr, false),
+    stderr,
+    mock: null,
+    clientVersion: null,
+    env: {},
+  })
+  try {
+    const parked = engine as unknown as { park(next: bigint, now: bigint): Promise<void> }
+    const now = 1788134400001n
+    let woke = false
+    void parked.park(now + BigInt(DAY), now).then(() => {
+      woke = true
+    })
+    t.mock.timers.tick(59_999)
+    await new Promise((resolve) => setImmediate(resolve))
+    assert.equal(woke, false)
+    t.mock.timers.tick(1)
+    await new Promise((resolve) => setImmediate(resolve))
+    assert.equal(woke, true)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
 test('C15/C15b: `t` reaches the wire as the host clock says, uncorrected', async () => {
   for (const pin of ['0', '2103753600000', '-14256000000', '99999999999999999999']) {
     await withRig(

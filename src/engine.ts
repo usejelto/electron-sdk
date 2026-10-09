@@ -15,7 +15,7 @@ import {
 import { Clock } from './clock.ts'
 import { Debug } from './debug.ts'
 import { validateEndpoint } from './endpoint.ts'
-import { millisUntil, parseInstant } from './instant.ts'
+import { dayIndex, millisUntil, MS_PER_DAY, parseInstant } from './instant.ts'
 import { detectPlatform, knownAppVersion, type Platform } from './platform.ts'
 import { EventQueue } from './queue.ts'
 import { Store } from './store.ts'
@@ -54,6 +54,13 @@ export const INSTALL_CLAIM_AFTER_MS = 30 * 24 * 60 * 60 * 1000
 export const TERMINATION_BUDGET_MS = 600
 /** One `advance` in REAL time, however many barriers it takes. */
 export const SETTLE_BUDGET_MS = 30_000
+/**
+ * C3b: the UTC day boundary must be seen on a clock that runs through system
+ * sleep, but Node timers count the monotonic clock, which pauses while the
+ * machine sleeps. Capping real waits makes a woken machine re-read the wall
+ * clock within a minute; an early wake finds nothing due.
+ */
+export const REAL_WAIT_CAP_MS = 60_000
 
 /** spec/wire-v1.md §2: a product ID's whole legal grammar. */
 export const PRODUCT_KEY_SHAPE = /^prd_[a-z0-9]{10}$/
@@ -530,7 +537,7 @@ export class Engine {
       }
       this.wakeResolve = finish
       if (!this.clock.pinned && next !== null) {
-        timer = setTimeout(finish, millisUntil(now, next))
+        timer = setTimeout(finish, Math.min(millisUntil(now, next), REAL_WAIT_CAP_MS))
         timer.unref()
       }
     })
@@ -550,6 +557,22 @@ export class Engine {
     if (!this.stateDirActive || this.endpoint === null) return { next: null, acted: false }
     if (!this.observeAppVersion()) return { next: now + 1000n, acted: false }
     const state = this.store.get()
+
+    // C3b: a running SDK sends each new UTC day's heartbeat without another init,
+    // or an app left open across midnight counts only on the days it was
+    // launched. Queued ahead of the stop and retry gates, which govern sending;
+    // sent like the install, so a pending two-second initial flush still
+    // carries it (C7). An empty day (after reset) differs from today, so a
+    // rotated identity heartbeats too.
+    const day = dayIndex(now).toString()
+    if (this.booted && state.last_heartbeat_day !== day) {
+      this.store.update((next) => {
+        next.last_heartbeat_day = day
+      })
+      this.enqueue({ id: uuidV7(now), n: 'heartbeat', t: now.toString(), hb: true })
+      if (this.initFlushAt === null) this.pending = true
+      return { next: null, acted: true }
+    }
 
     const firstTry = parseInstant(state.install_first_try)
     if (!state.install_claimed && firstTry !== null && now >= firstTry + BigInt(INSTALL_CLAIM_AFTER_MS)) {
@@ -620,6 +643,7 @@ export class Engine {
       this.trackFlushAt,
       parseInstant(state.backoff_next_at),
       parseInstant(state.stop_until),
+      (dayIndex(now) + 1n) * MS_PER_DAY, // C3b: the next UTC midnight
     ]
     if (!state.install_claimed) {
       if (!this.installEnqueuedThisRun) candidates.push(parseInstant(state.install_due_at))
