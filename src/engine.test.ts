@@ -718,6 +718,29 @@ test('C16b: an app SDK ignores a stop scoped to web', async () => {
   })
 })
 
+test('wire §8: a stop `until` beyond 30 days is bounded to 30 days from receipt; a nearer one is stored as sent', async () => {
+  const now = 1788134400000n
+  await withRig(async (rig, mock) => {
+    mock.answer({ status: 202, body: '{"stop":{"until":99999999999,"scope":"app"}}' })
+    rig.sdk.init(KEY)
+    // Pinned: init's 2 s flush is answered once the advance has moved the clock.
+    await rig.sdk.advance(3_000)
+    const answeredAt = now + 3_000n
+    assert.equal(rig.sdk.exportState().stop_until, String(answeredAt + 2_592_000_000n))
+    assert.equal(rig.sdk.exportState().stop_probe_due, true)
+    assert.ok(rig.stderr().includes('is bounded to'), rig.stderr())
+    assert.ok(!rig.stderr().includes('is already past'), rig.stderr())
+  })
+  await withRig(async (rig, mock) => {
+    const until = Number(now / 1000n) + 86_400
+    mock.answer({ status: 202, body: JSON.stringify({ stop: { until, scope: 'app' } }) })
+    rig.sdk.init(KEY)
+    await rig.sdk.advance(3_000)
+    assert.equal(rig.sdk.exportState().stop_until, String(until * 1000))
+    assert.ok(!rig.stderr().includes('is bounded to'), rig.stderr())
+  })
+})
+
 test('C17: the exact body reaches stderr before it is sent', async () => {
   await withRig(async (rig, mock) => {
     rig.sdk.init(KEY)

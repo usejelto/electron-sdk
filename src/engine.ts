@@ -46,6 +46,8 @@ export const INIT_FLUSH_DELAY_MS = 2_000
 export const TRACK_DEBOUNCE_MS = 5_000
 /** Mark the install claimed after 30 days of attempts if no 202 has arrived. */
 export const INSTALL_CLAIM_AFTER_MS = 30 * 24 * 60 * 60 * 1000
+/** wire §8 (rev 0.26): a `stop.until` is honoured for at most 30 days from receipt. */
+export const STOP_MAX_PARK_MS = 30n * 24n * 60n * 60n * 1000n
 /**
  * Bounds the termination flush, which is best effort on app background or
  * termination. C1 gives the process 1 s to exit with 1 000 events queued, so
@@ -824,11 +826,21 @@ export class Engine {
       return
     }
     // wire §8 sends `until` in SECONDS; §3.2 exports `stop_until` in ms.
-    const untilMS = stop.untilSeconds * 1000n
+    let untilMS = stop.untilSeconds * 1000n
     if (untilMS < answeredAt) {
       // An expired stop still requires the first post-expiry probe. C16 checks this
       // diagnostic to verify that its host and mock clocks are aligned.
       this.log.log(`stop until ${untilMS.toString()} is already past (now ${answeredAt.toString()})`)
+    }
+    // wire §8 (rev 0.26): park for at most 30 days from receipt. A longer switch
+    // is honoured as exactly that and re-read by the probe, so one forged, stale
+    // or mistaken answer cannot silence an install for years.
+    const bound = answeredAt + STOP_MAX_PARK_MS
+    if (untilMS > bound) {
+      this.log.log(
+        `stop until ${untilMS.toString()} exceeds 30 days from receipt and is bounded to ${bound.toString()} (spec/wire-v1.md §8)`,
+      )
+      untilMS = bound
     }
     this.store.update((state) => {
       state.stop_until = untilMS.toString()
