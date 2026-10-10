@@ -2,8 +2,8 @@
 // Byte accounting measures live encoded events, not file size. Cap eviction
 // appends until dead bytes justify compaction; acknowledgements still checkpoint.
 
-import { appendFileSync, mkdirSync, readFileSync, rmSync } from 'node:fs'
-import { atomicWrite } from './atomic.ts'
+import { appendFileSync, readFileSync, rmSync } from 'node:fs'
+import { atomicWrite, ensurePrivateDir } from './atomic.ts'
 import type { QueuedEvent } from './wire.ts'
 
 export const QUEUE_MAX_BYTES = 1 << 20
@@ -98,7 +98,7 @@ export class EventQueue {
       this.rewrite()
     } else {
       try {
-        mkdirSync(this.dir, { recursive: true, mode: 0o700 })
+        ensurePrivateDir(this.dir)
         appendFileSync(this.path, `${line}\n`, { mode: 0o600 })
         this.fileBytes += bytes
       } catch {
@@ -225,7 +225,7 @@ export class EventQueue {
         this.needsRewrite = false
         return
       }
-      mkdirSync(this.dir, { recursive: true, mode: 0o700 })
+      ensurePrivateDir(this.dir)
       const contents = this.contents()
       if (atomicWrite(this.path, contents, false)) {
         this.fileBytes = Buffer.byteLength(contents, 'utf8')

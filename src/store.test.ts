@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -53,5 +53,20 @@ test('wipe on a directory holding only this SDK\'s own files leaves it empty', (
     store.update((state) => { state.install_id = 'x' })
     store.wipe()
     assert.deepEqual(readdirSync(dir), [])
+  } finally { rmSync(dir, { recursive: true, force: true }) }
+})
+
+test('a state directory that already exists is re-asserted owner-only (spec/sdk-conformance.md §5)', (t) => {
+  if (process.platform === 'win32') {
+    t.skip('no POSIX mode to assert; the per-user LocalApplicationData ACL is the bound')
+    return
+  }
+  const dir = mkdtempSync(join(tmpdir(), 'jelto-store-mode-'))
+  try {
+    chmodSync(dir, 0o755)
+    assert.equal(statSync(dir).mode & 0o777, 0o755)
+    new Store(dir).update((state) => { state.install_id = 'x' })
+    assert.equal(statSync(dir).mode & 0o777, 0o700)
+    assert.equal(statSync(join(dir, 'state.json')).mode & 0o777, 0o600)
   } finally { rmSync(dir, { recursive: true, force: true }) }
 })

@@ -1,7 +1,7 @@
 // The queue's cap-eviction rule — C6, and the reload half C4b and C8 turn on.
 
 import assert from 'node:assert/strict'
-import { appendFileSync, existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs'
+import { appendFileSync, chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -207,6 +207,21 @@ test('C18: delete removes the file and everything it held', () => {
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }
+})
+
+test('append re-asserts 0700 on a state directory that already exists (spec/sdk-conformance.md §5)', (t) => {
+  if (process.platform === 'win32') {
+    t.skip('no POSIX mode to assert; the per-user LocalApplicationData ACL is the bound')
+    return
+  }
+  const dir = scratch()
+  try {
+    chmodSync(dir, 0o755)
+    assert.equal(statSync(dir).mode & 0o777, 0o755)
+    const queue = new EventQueue(dir, join(dir, 'queue.jsonl'))
+    queue.append(event('x'))
+    assert.equal(statSync(dir).mode & 0o777, 0o700)
+  } finally { rmSync(dir, { recursive: true, force: true }) }
 })
 
 test('C5: loading an absent queue creates neither the file nor the directory', () => {
