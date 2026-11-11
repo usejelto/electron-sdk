@@ -43,6 +43,8 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
+          # make check scans the whole Git history for secrets.
+          fetch-depth: 0
       - uses: actions/setup-python@v7
         with:
           python-version: '3.14'
@@ -54,8 +56,6 @@ jobs:
         # Outside the lockfile on purpose: the packaging toolchain itself, pinned
         # to an exact release and installed without lifecycle scripts.
         run: npm install --global npm@11.21.0 --ignore-scripts # zizmor: ignore[adhoc-packages]
-      - name: Dependency vulnerability check
-        run: npm audit --audit-level=moderate --package-lock-only
       - name: Install verified contracts pin
         if: inputs.release || inputs.conformance
         run: python3 vendor/release-tools/release.py contracts
@@ -64,8 +64,10 @@ jobs:
         with:
           go-version-file: .contracts/go.mod
           cache: false
-      - name: Component tests and packages
-        run: make test build package
+      # The same command a contributor runs: tests, the package and the
+      # security scans, npm audit among them.
+      - name: Checks
+        run: make check
       - name: Conformance twice
         if: inputs.release || inputs.conformance
         # Both passes run concurrently in the Makefile: each runner has its own
