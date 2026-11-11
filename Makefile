@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := test
-.PHONY: build test conformance conformance-run conformance-twice package security check npm-audit lint deadcode
+.PHONY: build test conformance conformance-run conformance-twice package security check npm-audit lint deadcode boundaries
 
 # The shared quality targets (hooks, tools, secrets, osv, workflow-audit, sast)
 # arrive from the contracts repository as a checksummed snapshot; `make inputs`
@@ -59,9 +59,15 @@ lint: node_modules
 KNIP_BASELINE := .knip-baseline.json
 deadcode: node_modules knip
 
+# dependency-cruiser (.dependency-cruiser.cjs): no cycles, no unresolved
+# import, shipped code uses only `dependencies`, and the SDK in src/ never
+# imports the development-only host/, scripts/ or build script.
+boundaries: node_modules
+	npx --no-install depcruise src host scripts build.mjs --config .dependency-cruiser.cjs
+
 # The whole gate: what to run before a pull request, and what CI runs.
 # Conformance twice runs beside it in CI on release or on request.
-check: lint deadcode test build package security
+check: lint deadcode boundaries test build package security
 
 security: secrets workflow-audit osv npm-audit
 

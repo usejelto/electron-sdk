@@ -16,4 +16,9 @@ export default ts.config(
     files: ['build.mjs', 'scripts/**', '*.config.js', '*.config.ts'],
     languageOptions: { globals: { ...globals.node } },
   },
+  {
+    // dependency-cruiser reads its configuration as CommonJS.
+    files: ['.dependency-cruiser.cjs'],
+    languageOptions: { sourceType: 'commonjs', globals: { ...globals.node } },
+  },
 )
