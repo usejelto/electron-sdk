@@ -399,7 +399,7 @@ export function parseResponse(body: Buffer): ServerResponse | null {
     // absent rather than handed to BigInt() as a trusted deadline.
     const withinRange = digits !== undefined && digits.replace(/^-/, '').length <= 15
     let untilSeconds: bigint | null = null
-    let untilText = ''
+    let untilText: string
     if (withinRange) {
       untilText = digits
       untilSeconds = BigInt(digits)

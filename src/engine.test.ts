@@ -51,7 +51,7 @@ class Mock {
       request.on('data', (chunk: Buffer) => chunks.push(chunk))
       request.on('end', () => {
         const body = Buffer.concat(chunks).toString('utf8')
-        let events: Array<Record<string, unknown>> = []
+        let events: Array<Record<string, unknown>>
         try {
           events = (JSON.parse(body) as { e: Array<Record<string, unknown>> }).e
         } catch {
@@ -976,8 +976,7 @@ test('spec/wire-v1.md §2: a key outside the grammar is refused, and init stays 
 })
 
 test('spec/sdk-conformance.md §5: a null state directory leaves the engine permanently inactive', async () => {
-  let text = ''
-  const stderr = { write: (chunk: string | Buffer): boolean => ((text += chunk.toString()), true) }
+  const stderr = { write: (): boolean => true }
   const engine = new Engine({
     endpoint: 'https://example.invalid/v1/e',
     stateDir: null,

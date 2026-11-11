@@ -45,7 +45,7 @@ export class Transport {
     this.endpoint = endpoint
     this.mock = mock
     this.log = log
-    let url: URL | null = null
+    let url: URL | null
     try {
       url = new URL(endpoint)
     } catch {

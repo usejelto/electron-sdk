@@ -57,7 +57,7 @@ alone does not resolve it.
 
 ## Checks and exceptions
 
-`make check` is the whole gate, and the command CI runs on Linux. It runs `test`, `build`, `package` and `security`. `make hooks`
+`make check` is the whole gate, and the command CI runs on Linux. It runs `lint`, `test`, `build`, `package` and `security`. `make hooks`
 enables two Git hooks once per clone: `commit-msg` rejects a subject that is
 not a Conventional Commit, and `pre-commit` runs gitleaks over the staged
 changes. Do not bypass them with `--no-verify`.
@@ -67,10 +67,12 @@ The security targets run separate programs, not project dependencies.
 downloads and verifies it into `~/.cache/jelto-tools` (`JELTO_TOOLS_DIR`
 overrides the location), and `make tools` installs them all ahead of time.
 `vendor/quality/` is a checksummed snapshot of the contracts repository's
-`tools/quality/`; change it there, not here.
+`tools/quality/`; change it there, not here. ESLint is a development
+dependency, pinned by `package-lock.json`.
 
 | Target | Tool | What it checks |
 |---|---|---|
+| `make lint` | ESLint | the recommended JavaScript and TypeScript rules (`eslint.config.js`), no warnings |
 | `make secrets` | gitleaks | the whole Git history for credentials |
 | `make workflow-audit` | actionlint, zizmor | workflow syntax, script injection, permissions and pinning |
 | `make osv` | OSV-Scanner | `package-lock.json` against the OSV database, downloaded and matched locally |
@@ -83,7 +85,8 @@ place it applies, with the reason beside it:
 - gitleaks: a `.gitleaks.toml` allowlist entry naming the one literal and why;
 - zizmor: `# zizmor: ignore[<audit>]` on the line, with the reason above it;
 - OSV-Scanner: an `[[IgnoredVulns]]` entry in `osv-scanner.toml` with a
-  `reason` and an `ignoreUntil` date.
+  `reason` and an `ignoreUntil` date;
+- ESLint: `// eslint-disable-next-line <rule> -- <reason>` above the line.
 
 Never disable a rule, a file or a directory wholesale, and never relax a
 threshold to make a check pass.
