@@ -80,6 +80,7 @@ dependency-cruiser are development dependencies, pinned by
 | `make workflow-audit` | actionlint, zizmor | workflow syntax, script injection, permissions and pinning |
 | `make osv` | OSV-Scanner | `package-lock.json` against the OSV database, downloaded and matched locally |
 | `make npm-audit` | npm audit | `package-lock.json` against the npm advisory database |
+| `make sast` | opengrep | the community TypeScript, JavaScript and Unicode rules, and the repository's own rules in `.opengrep/` (no client-address header is read; contracts come from `JELTO_CONTRACTS_DIR`), each tested against its test file |
 
 When a check reports something, fix a real problem in the same change. A
 deliberate exception, or a finding the tool got wrong, is marked at the one
@@ -93,7 +94,9 @@ place it applies, with the reason beside it:
 - Knip: an entry in `knip.config.ts` for a file or dependency a tool loads
   without an import, with the reason in a comment;
 - dependency-cruiser: a `pathNot` on the one rule and path it concerns, with
-  the reason in the rule's comment.
+  the reason in the rule's comment;
+- opengrep: `// nosemgrep: <rule-id> -- <reason>` at the end of the finding's
+  first line.
 
 Knip started with a baseline of the findings that predate it,
 `.knip-baseline.json` (30 exports used only inside their own module). Only a

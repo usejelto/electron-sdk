@@ -12,8 +12,9 @@ export default ts.config(
   js.configs.recommended,
   ts.configs.recommended,
   {
-    // Node scripts and configuration that run at build or package time.
-    files: ['build.mjs', 'scripts/**', '*.config.js', '*.config.ts'],
+    // Node scripts and configuration that run at build or package time, and
+    // the opengrep rule test cases, written as Node modules.
+    files: ['build.mjs', 'scripts/**', '.opengrep/**', '*.config.js', '*.config.ts'],
     languageOptions: { globals: { ...globals.node } },
   },
   {

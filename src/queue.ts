@@ -242,7 +242,7 @@ export class EventQueue {
   }
 
   private receiptLine(): string {
-    return this.recoveredUpdateID === '' ? '' : `${JSON.stringify({ recovered_update_id: this.recoveredUpdateID })}\n`
+    return this.recoveredUpdateID === '' ? '' : `${JSON.stringify({ recovered_update_id: this.recoveredUpdateID })}\n` // nosemgrep: missing-template-string-indicator -- the braces are an object literal inside the interpolation
   }
 
   private contents(): string {

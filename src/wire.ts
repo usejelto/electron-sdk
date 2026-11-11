@@ -80,7 +80,7 @@ export function gateEventName(name: string, log: Debug): string | null {
   // SDK never throws into it. A value of the wrong type
   // is a client-side drop with a line, exactly like a value of the wrong shape.
   if (typeof name !== 'string' || !RE_EVENT_NAME.test(name)) {
-    log.log(`drop event ${Debug.display(name)}: spec/wire-v1.md §3 \`n\` is ^[a-z0-9_:.-]{1,64}$`)
+    log.log(`drop event ${Debug.display(name)}: spec/wire-v1.md §3 \`n\` is ^[a-z0-9_:.-]{1,64}$`) // nosemgrep: missing-template-string-indicator -- the braces are a regex quantifier in the logged grammar, not a placeholder
     return null
   }
   return name
@@ -111,7 +111,7 @@ export function gateTrackProps(props: Record<string, PropValue> | undefined, eve
   for (const key of keys) {
     if (!RE_PROP_KEY.test(key)) {
       log.log(
-        `drop event ${Debug.display(eventName)}: props key ${Debug.display(key)} does not match spec/wire-v1.md §3's ^[a-z0-9_]{1,32}$`,
+        `drop event ${Debug.display(eventName)}: props key ${Debug.display(key)} does not match spec/wire-v1.md §3's ^[a-z0-9_]{1,32}$`, // nosemgrep: missing-template-string-indicator -- the braces are a regex quantifier in the logged grammar, not a placeholder
       )
       return false
     }
@@ -155,7 +155,7 @@ export function gateOnboarding(
   log: Debug,
 ): { name: string; props: Record<string, PropValue> } | null {
   if (typeof step !== 'string' || !RE_ONBOARDING_STEP.test(step)) {
-    log.log(`drop onboarding step ${Debug.display(step)}: spec/wire-v1.md §4 \`<step>\` is ^[a-z0-9_-]{1,32}$`)
+    log.log(`drop onboarding step ${Debug.display(step)}: spec/wire-v1.md §4 \`<step>\` is ^[a-z0-9_-]{1,32}$`) // nosemgrep: missing-template-string-indicator, html-in-template-string -- the braces are a regex quantifier and `<step>` names a wire field, in a debug line on stderr, not HTML
     return null
   }
   if (status !== 'ok' && status !== 'fail' && status !== 'skip') {
@@ -195,17 +195,17 @@ export function gateInstallProps(raw: Record<string, PropValue>, log: Debug): Re
     const value = raw[key]
     if (typeof value !== 'string') {
       log.log(
-        `drop install property ${Debug.display(key)}: spec/wire-v1.md §4 install-property values are strings matching ^[a-z0-9_.-]{1,24}$`,
+        `drop install property ${Debug.display(key)}: spec/wire-v1.md §4 install-property values are strings matching ^[a-z0-9_.-]{1,24}$`, // nosemgrep: missing-template-string-indicator -- the braces are a regex quantifier in the logged grammar, not a placeholder
       )
       continue
     }
     if (!RE_PROP_KEY.test(key)) {
-      log.log(`drop install property ${Debug.display(key)}: spec/wire-v1.md §3 \`props\` keys are ^[a-z0-9_]{1,32}$`)
+      log.log(`drop install property ${Debug.display(key)}: spec/wire-v1.md §3 \`props\` keys are ^[a-z0-9_]{1,32}$`) // nosemgrep: missing-template-string-indicator -- the braces are a regex quantifier in the logged grammar, not a placeholder
       continue
     }
     if (!RE_INSTALL_PROP_VALUE.test(value)) {
       log.log(
-        `drop install property ${Debug.display(key)}: spec/wire-v1.md §4 install-property values are ^[a-z0-9_.-]{1,24}$, not ${Debug.display(value)}`,
+        `drop install property ${Debug.display(key)}: spec/wire-v1.md §4 install-property values are ^[a-z0-9_.-]{1,24}$, not ${Debug.display(value)}`, // nosemgrep: missing-template-string-indicator -- the braces are a regex quantifier in the logged grammar, not a placeholder
       )
       continue
     }
@@ -234,7 +234,7 @@ export function gateClientVersion(override: string | undefined, log: Debug): str
   if (override === '') return null
   if (RE_CLIENT_VERSION.test(override) && [...override].length <= 32) return override
   log.log(
-    `client version ${Debug.display(override)} does not match spec/wire-v1.md §3's ^[a-z]+/[0-9A-Za-z.+-]{1,24}$; \`v\` is omitted`,
+    `client version ${Debug.display(override)} does not match spec/wire-v1.md §3's ^[a-z]+/[0-9A-Za-z.+-]{1,24}$; \`v\` is omitted`, // nosemgrep: missing-template-string-indicator -- the braces are a regex quantifier in the logged grammar, not a placeholder
   )
   return null
 }
@@ -243,7 +243,7 @@ export function gateClientVersion(override: string | undefined, log: Debug): str
 export function gateAppSlug(raw: string | undefined, log: Debug): string | null {
   if (raw === undefined || raw === null || raw === '') return null
   if (typeof raw !== 'string' || !RE_APP_SLUG.test(raw)) {
-    log.log(`drop app slug ${Debug.display(raw)}: spec/wire-v1.md §5.2 \`a\` is ^[a-z0-9-]{1,32}$`)
+    log.log(`drop app slug ${Debug.display(raw)}: spec/wire-v1.md §5.2 \`a\` is ^[a-z0-9-]{1,32}$`) // nosemgrep: missing-template-string-indicator -- the braces are a regex quantifier in the logged grammar, not a placeholder
     return null
   }
   return raw

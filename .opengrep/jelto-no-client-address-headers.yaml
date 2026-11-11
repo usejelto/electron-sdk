@@ -1,0 +1,26 @@
+rules:
+  # The SDK never reads a client address: no IP storage or logging. An address
+  # arrives through a forwarding header, so the code never reads one of them,
+  # by any header API; the transport reads only Retry-After from the intake's
+  # response, and the conformance host reads no header at all.
+  - id: jelto-no-client-address-headers
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: >-
+      This reads a client-address header. Jelto never collects a visitor's
+      IP address; remove the read rather than forwarding or hashing it.
+    pattern-either:
+      - patterns:
+          - pattern-either:
+              # Fetch Headers, a Node.js header object, Express and Electron.
+              - pattern: $HEADERS.get($NAME, ...)
+              - pattern: $HEADERS.getAll($NAME, ...)
+              - pattern: $HEADERS.has($NAME, ...)
+              - pattern: $REQUEST.header($NAME, ...)
+              - pattern: $REQUEST.getHeader($NAME, ...)
+              - pattern: $HEADERS[$NAME]
+          - metavariable-regex:
+              metavariable: $NAME
+              regex: (?i)^['"`](x-forwarded-for|x-real-ip|cf-connecting-ip|true-client-ip|forwarded)['"`]$
+      # The one name that is also a plain identifier.
+      - pattern: $REQUEST.headers.forwarded

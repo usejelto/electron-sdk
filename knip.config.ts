@@ -15,6 +15,9 @@ const config: KnipConfig = {
     'host/main.ts',
     // The tarball check the Makefile's `package` target runs before npm pack.
     'scripts/check-pack.mjs',
+    // The opengrep rule test cases, which `opengrep test .opengrep` (make sast)
+    // pairs with the rule of the same name instead of importing them.
+    '.opengrep/*.{ts,mjs}',
   ],
   // The Makefile runs dependency-cruiser (`make boundaries`) and Prettier
   // (`make format-check`); Knip reads package.json scripts, not the Makefile.

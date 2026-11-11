@@ -1,0 +1,35 @@
+rules:
+  # Conformance finds the shared contracts through JELTO_CONTRACTS_DIR, set to
+  # a verified, extracted contracts archive. A relative path to a sibling
+  # checkout (../contracts) would run against whatever happens to sit beside
+  # the clone, unverified, and fail in every standalone clone.
+  - id: jelto-contracts-from-env-only
+    languages: [generic]
+    severity: ERROR
+    message: >-
+      A parent-relative path to a contracts checkout. Take the contracts
+      location from JELTO_CONTRACTS_DIR instead.
+    paths:
+      include:
+        # Source, tests, scripts, package scripts, the Makefile and workflows.
+        - '*.ts'
+        - '*.mts'
+        - '*.cts'
+        - '*.js'
+        - '*.mjs'
+        - '*.cjs'
+        - '*.json'
+        - '*.sh'
+        - '*.py'
+        - '*.yml'
+        - '*.yaml'
+        - 'Makefile'
+        - '*.mk'
+        # The shell wrapper the conformance runner starts.
+        - 'conformance-host'
+        - '/.opengrep/jelto-contracts-from-env-only.*'
+    pattern-either:
+      # ../contracts, ../../jelto-contracts, ..\contracts
+      - pattern-regex: \.\.[\\/]+(?:\.\.[\\/]+)*(?:jelto-)?contracts\b
+      # path.join(root, '..', 'contracts') and the like
+      - pattern-regex: '[''"]\.\.[''"]\s*,\s*[''"](?:jelto-)?contracts[''"]'

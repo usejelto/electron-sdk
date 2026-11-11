@@ -30,7 +30,7 @@ test('post() never rejects, even when JELTO_MOCK is hostile enough to inject a h
 test('a mock value outside the header-safe ASCII range is dropped, not sent, and logged once', async () => {
   const server = createServer((request, response) => {
     response.writeHead(202, { 'Content-Type': 'application/json' })
-    response.end(JSON.stringify({ mock: request.headers['x-mock'] ?? null }))
+    response.end(JSON.stringify({ mock: request.headers['x-mock'] ?? null })) // nosemgrep: no-stringify-keys -- the JSON is the mock server's response body, not an object key
   })
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
   try {
@@ -49,7 +49,7 @@ test('a mock value outside the header-safe ASCII range is dropped, not sent, and
 test('a well-formed mock value still rides as X-Mock, verbatim', async () => {
   const server = createServer((request, response) => {
     response.writeHead(202, { 'Content-Type': 'application/json' })
-    response.end(JSON.stringify({ mock: request.headers['x-mock'] ?? null }))
+    response.end(JSON.stringify({ mock: request.headers['x-mock'] ?? null })) // nosemgrep: no-stringify-keys -- the JSON is the mock server's response body, not an object key
   })
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
   try {

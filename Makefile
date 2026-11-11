@@ -4,6 +4,12 @@
 # The shared quality targets (hooks, tools, secrets, osv, workflow-audit, sast)
 # arrive from the contracts repository as a checksummed snapshot; `make inputs`
 # in the backend refreshes it, and nothing edits it here.
+# sast: the community rules for TypeScript and JavaScript, and the Unicode
+# (bidirectional text) rule for every file. The browser rules are left out on
+# purpose: the SDK runs in Electron's main process only, never in a page. The
+# repository's own rules and their test cases are in .opengrep/.
+QUALITY_COMMUNITY_RULES := typescript/lang/security typescript/lang/correctness \
+	javascript/lang/security javascript/lang/correctness generic/unicode/security
 include vendor/quality/quality.mk
 JELTO_CONTRACTS_DIR ?=
 JELTO_CONTRACTS_VERSION = $(shell python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' "$(JELTO_CONTRACTS_DIR)/spec/contracts/manifest.json")
@@ -69,7 +75,7 @@ boundaries: node_modules
 # Conformance twice runs beside it in CI on release or on request.
 check: lint deadcode boundaries test build package security
 
-security: secrets workflow-audit osv npm-audit
+security: secrets workflow-audit osv npm-audit sast
 
 npm-audit:
 	npm audit --audit-level=moderate --package-lock-only
