@@ -57,7 +57,7 @@ alone does not resolve it.
 
 ## Checks and exceptions
 
-`make check` is the whole gate, and the command CI runs on Linux. It runs `lint`, `test`, `build`, `package` and `security`. `make hooks`
+`make check` is the whole gate, and the command CI runs on Linux. It runs `lint`, `deadcode`, `test`, `build`, `package` and `security`. `make hooks`
 enables two Git hooks once per clone: `commit-msg` rejects a subject that is
 not a Conventional Commit, and `pre-commit` runs gitleaks over the staged
 changes. Do not bypass them with `--no-verify`.
@@ -67,12 +67,13 @@ The security targets run separate programs, not project dependencies.
 downloads and verifies it into `~/.cache/jelto-tools` (`JELTO_TOOLS_DIR`
 overrides the location), and `make tools` installs them all ahead of time.
 `vendor/quality/` is a checksummed snapshot of the contracts repository's
-`tools/quality/`; change it there, not here. ESLint is a development
-dependency, pinned by `package-lock.json`.
+`tools/quality/`; change it there, not here. ESLint and Knip are development
+dependencies, pinned by `package-lock.json`.
 
 | Target | Tool | What it checks |
 |---|---|---|
 | `make lint` | ESLint | the recommended JavaScript and TypeScript rules (`eslint.config.js`), no warnings |
+| `make deadcode` | Knip | files nothing imports, unused exports and dependencies, undeclared ones (`knip.config.ts`) |
 | `make secrets` | gitleaks | the whole Git history for credentials |
 | `make workflow-audit` | actionlint, zizmor | workflow syntax, script injection, permissions and pinning |
 | `make osv` | OSV-Scanner | `package-lock.json` against the OSV database, downloaded and matched locally |
@@ -86,7 +87,15 @@ place it applies, with the reason beside it:
 - zizmor: `# zizmor: ignore[<audit>]` on the line, with the reason above it;
 - OSV-Scanner: an `[[IgnoredVulns]]` entry in `osv-scanner.toml` with a
   `reason` and an `ignoreUntil` date;
-- ESLint: `// eslint-disable-next-line <rule> -- <reason>` above the line.
+- ESLint: `// eslint-disable-next-line <rule> -- <reason>` above the line;
+- Knip: an entry in `knip.config.ts` for a file or dependency a tool loads
+  without an import, with the reason in a comment.
+
+Knip started with a baseline of the findings that predate it,
+`.knip-baseline.json` (30 exports used only inside their own module). Only a
+new finding fails, and a fixed one fails until it leaves the baseline (`make
+knip-baseline`, then review the diff). Nothing is added to a baseline to make
+a check pass.
 
 Never disable a rule, a file or a directory wholesale, and never relax a
 threshold to make a check pass.

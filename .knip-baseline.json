@@ -1,0 +1,185 @@
+{
+  "_comment": "Findings that predate the linter, reviewed when it was adopted. Fix them and shrink this file; never add to it to make a check pass. Rewritten by lint_baseline.py write.",
+  "findings": [
+    {
+      "path": "host/dispatch.ts",
+      "linter": "knip:types",
+      "text": "DispatchResult",
+      "count": 1
+    },
+    {
+      "path": "src/backoff.ts",
+      "linter": "knip:exports",
+      "text": "BACKOFF_FIRST_STEP_MS",
+      "count": 1
+    },
+    {
+      "path": "src/engine.ts",
+      "linter": "knip:exports",
+      "text": "INIT_FLUSH_DELAY_MS",
+      "count": 1
+    },
+    {
+      "path": "src/engine.ts",
+      "linter": "knip:exports",
+      "text": "INSTALL_CLAIM_AFTER_MS",
+      "count": 1
+    },
+    {
+      "path": "src/engine.ts",
+      "linter": "knip:exports",
+      "text": "PRODUCT_KEY_SHAPE",
+      "count": 1
+    },
+    {
+      "path": "src/engine.ts",
+      "linter": "knip:exports",
+      "text": "REAL_WAIT_CAP_MS",
+      "count": 1
+    },
+    {
+      "path": "src/engine.ts",
+      "linter": "knip:exports",
+      "text": "SETTLE_BUDGET_MS",
+      "count": 1
+    },
+    {
+      "path": "src/engine.ts",
+      "linter": "knip:exports",
+      "text": "STOP_MAX_PARK_MS",
+      "count": 1
+    },
+    {
+      "path": "src/engine.ts",
+      "linter": "knip:exports",
+      "text": "TERMINATION_BUDGET_MS",
+      "count": 1
+    },
+    {
+      "path": "src/engine.ts",
+      "linter": "knip:exports",
+      "text": "TRACK_DEBOUNCE_MS",
+      "count": 1
+    },
+    {
+      "path": "src/engine.ts",
+      "linter": "knip:exports",
+      "text": "gateClientVersion",
+      "count": 1
+    },
+    {
+      "path": "src/platform.ts",
+      "linter": "knip:exports",
+      "text": "resolveOSVersion",
+      "count": 1
+    },
+    {
+      "path": "src/platform.ts",
+      "linter": "knip:exports",
+      "text": "truncate32",
+      "count": 1
+    },
+    {
+      "path": "src/store.ts",
+      "linter": "knip:exports",
+      "text": "emptyState",
+      "count": 1
+    },
+    {
+      "path": "src/transport.ts",
+      "linter": "knip:exports",
+      "text": "REQUEST_TIMEOUT_MS",
+      "count": 1
+    },
+    {
+      "path": "src/transport.ts",
+      "linter": "knip:exports",
+      "text": "RESPONSE_READ_CAP",
+      "count": 1
+    },
+    {
+      "path": "src/wire.ts",
+      "linter": "knip:exports",
+      "text": "MAX_PROPS",
+      "count": 1
+    },
+    {
+      "path": "src/wire.ts",
+      "linter": "knip:exports",
+      "text": "MAX_PROP_STRING",
+      "count": 1
+    },
+    {
+      "path": "src/wire.ts",
+      "linter": "knip:exports",
+      "text": "MAX_REASON_CHARS",
+      "count": 1
+    },
+    {
+      "path": "src/wire.ts",
+      "linter": "knip:exports",
+      "text": "RE_APP_SLUG",
+      "count": 1
+    },
+    {
+      "path": "src/wire.ts",
+      "linter": "knip:exports",
+      "text": "RE_CLIENT_VERSION",
+      "count": 1
+    },
+    {
+      "path": "src/wire.ts",
+      "linter": "knip:exports",
+      "text": "RE_EVENT_NAME",
+      "count": 1
+    },
+    {
+      "path": "src/wire.ts",
+      "linter": "knip:exports",
+      "text": "RE_INSTALL_PROP_VALUE",
+      "count": 1
+    },
+    {
+      "path": "src/wire.ts",
+      "linter": "knip:exports",
+      "text": "RE_ONBOARDING_REASON",
+      "count": 1
+    },
+    {
+      "path": "src/wire.ts",
+      "linter": "knip:exports",
+      "text": "RE_ONBOARDING_STEP",
+      "count": 1
+    },
+    {
+      "path": "src/wire.ts",
+      "linter": "knip:exports",
+      "text": "RE_PROP_KEY",
+      "count": 1
+    },
+    {
+      "path": "src/wire.ts",
+      "linter": "knip:exports",
+      "text": "byUTF8Bytes",
+      "count": 1
+    },
+    {
+      "path": "src/wire.ts",
+      "linter": "knip:types",
+      "text": "EventMetadata",
+      "count": 1
+    },
+    {
+      "path": "src/wire.ts",
+      "linter": "knip:types",
+      "text": "Rejection",
+      "count": 1
+    },
+    {
+      "path": "src/wire.ts",
+      "linter": "knip:types",
+      "text": "StopDirective",
+      "count": 1
+    }
+  ]
+}

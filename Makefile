@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := test
-.PHONY: build test conformance conformance-run conformance-twice package security check npm-audit lint
+.PHONY: build test conformance conformance-run conformance-twice package security check npm-audit lint deadcode
 
 # The shared quality targets (hooks, tools, secrets, osv, workflow-audit, sast)
 # arrive from the contracts repository as a checksummed snapshot; `make inputs`
@@ -50,9 +50,18 @@ package: build
 lint: node_modules
 	npx --no-install eslint --max-warnings 0 .
 
+# Knip (knip.config.ts): files nothing imports, unused exports and
+# dependencies, and dependencies used but not declared. The 30 exports that
+# predate it (module constants, helpers and types exported beside the ones the
+# tests import, none of them reachable through package.json `exports`) are
+# listed in .knip-baseline.json; a fixed one fails until `make knip-baseline`
+# removes it.
+KNIP_BASELINE := .knip-baseline.json
+deadcode: node_modules knip
+
 # The whole gate: what to run before a pull request, and what CI runs.
 # Conformance twice runs beside it in CI on release or on request.
-check: lint test build package security
+check: lint deadcode test build package security
 
 security: secrets workflow-audit osv npm-audit
 
