@@ -30,7 +30,9 @@ test('acknowledging an evicted in-flight batch preserves all newer unsent events
     assert.equal(queue.head(1)[0]!.n, 'update-0')
     queue.load()
     assert.equal(queue.length, QUEUE_MAX_EVENTS)
-  } finally { rmSync(dir, { recursive: true, force: true }) }
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
 })
 
 test('a failed recovery checkpoint leaves the previous queue intact', () => {
@@ -50,7 +52,9 @@ test('a failed recovery checkpoint leaves the previous queue intact', () => {
     assert.equal(queue.recover(update), true)
     assert.equal(queue.head(1)[0]!.n, 'x1')
     assert.equal(queue.head(QUEUE_MAX_EVENTS).at(-1)!.id, update.id)
-  } finally { rmSync(dir, { recursive: true, force: true }) }
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
 })
 
 test('a reset queue checkpoint retains the receipt until the old state intent is retired', () => {
@@ -68,7 +72,9 @@ test('a reset queue checkpoint retains the receipt until the old state intent is
     queue.delete()
     assert.equal(queue.recover(update), true)
     assert.equal(queue.contains('app_updated'), true)
-  } finally { rmSync(dir, { recursive: true, force: true }) }
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
 })
 
 test('legacy queue recovery remembers handoff before a failed checkpoint and later cap eviction', () => {
@@ -90,7 +96,9 @@ test('legacy queue recovery remembers handoff before a failed checkpoint and lat
     queue.load()
     assert.equal(queue.recover(update), true)
     assert.equal(queue.contains('app_updated'), false)
-  } finally { rmSync(dir, { recursive: true, force: true }) }
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
 })
 
 test('C6: 1 500 tracks leave 1 000 events, and the OLDEST were dropped', () => {
@@ -187,7 +195,10 @@ test('a half-written line costs that event, not the file', () => {
     )
     second.append(event('d'))
     second.load()
-    assert.deepEqual(second.exported().map((entry) => entry.n), ['a', 'b', 'd'])
+    assert.deepEqual(
+      second.exported().map((entry) => entry.n),
+      ['a', 'b', 'd'],
+    )
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }
@@ -221,7 +232,9 @@ test('append re-asserts 0700 on a state directory that already exists (spec/sdk-
     const queue = new EventQueue(dir, join(dir, 'queue.jsonl'))
     queue.append(event('x'))
     assert.equal(statSync(dir).mode & 0o777, 0o700)
-  } finally { rmSync(dir, { recursive: true, force: true }) }
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
 })
 
 test('C5: loading an absent queue creates neither the file nor the directory', () => {

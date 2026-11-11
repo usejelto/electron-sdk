@@ -17,19 +17,9 @@ test('the scenario corpus, verbatim', () => {
   assert.deepEqual(tokenize('track z'), ['track', 'z'])
 
   // C20b: a quoted free-text reason as the fourth token
-  assert.deepEqual(tokenize('onboarding x ok "Free text reason"'), [
-    'onboarding',
-    'x',
-    'ok',
-    'Free text reason',
-  ])
+  assert.deepEqual(tokenize('onboarding x ok "Free text reason"'), ['onboarding', 'x', 'ok', 'Free text reason'])
   assert.deepEqual(tokenize('onboarding "Bad Step!" ok'), ['onboarding', 'Bad Step!', 'ok'])
-  assert.deepEqual(tokenize('onboarding driver fail no_kext'), [
-    'onboarding',
-    'driver',
-    'fail',
-    'no_kext',
-  ])
+  assert.deepEqual(tokenize('onboarding driver fail no_kext'), ['onboarding', 'driver', 'fail', 'no_kext'])
   assert.deepEqual(tokenize('onboarding permissions ok'), ['onboarding', 'permissions', 'ok'])
   assert.deepEqual(tokenize('onboarding tour skip'), ['onboarding', 'tour', 'skip'])
 
@@ -59,10 +49,11 @@ test('the scenario corpus, verbatim', () => {
 
   // C6, after the runner has substituted `{i}`
   assert.deepEqual(tokenize('track x0'), ['track', 'x0'])
-  assert.deepEqual(
-    tokenize('track e.custom_0:x {"page":"' + 'a'.repeat(80) + '","n":1.5,"ok":true}'),
-    ['track', 'e.custom_0:x', '{"page":"' + 'a'.repeat(80) + '","n":1.5,"ok":true}'],
-  )
+  assert.deepEqual(tokenize('track e.custom_0:x {"page":"' + 'a'.repeat(80) + '","n":1.5,"ok":true}'), [
+    'track',
+    'e.custom_0:x',
+    '{"page":"' + 'a'.repeat(80) + '","n":1.5,"ok":true}',
+  ])
 
   assert.deepEqual(tokenize('sleep 25200000'), ['sleep', '25200000'])
   assert.deepEqual(tokenize('installid'), ['installid'])
@@ -78,11 +69,7 @@ test('an unsubstituted {i} is not a JSON opener', () => {
 })
 
 test('a token opening { or [ takes the rest of the line', () => {
-  assert.deepEqual(tokenize('track x {"a":1} trailing words'), [
-    'track',
-    'x',
-    '{"a":1} trailing words',
-  ])
+  assert.deepEqual(tokenize('track x {"a":1} trailing words'), ['track', 'x', '{"a":1} trailing words'])
   assert.deepEqual(tokenize('setprops [1, 2, 3]'), ['setprops', '[1, 2, 3]'])
   // ... and it is trimmed
   assert.deepEqual(tokenize('setprops {"a":1}   '), ['setprops', '{"a":1}'])

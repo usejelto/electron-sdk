@@ -31,13 +31,14 @@ test('§3.1 keys survive a round trip', () => {
     ok: true,
     value: '9f2c',
   })
-  assert.deepEqual(
-    JSON.parse(encodeReply({ cmd: 'track', ok: false, error: 'track <name> [json-props]' })),
-    { cmd: 'track', ok: false, error: 'track <name> [json-props]' },
-  )
+  assert.deepEqual(JSON.parse(encodeReply({ cmd: 'track', ok: false, error: 'track <name> [json-props]' })), {
+    cmd: 'track',
+    ok: false,
+    error: 'track <name> [json-props]',
+  })
 })
 
-test("an installid that printed nothing still prints a `value` key", () => {
+test('an installid that printed nothing still prints a `value` key', () => {
   // C18 asserts `host_reply, key: installid, empty: true`, which the runner
   // reads as `reply.Value == ""`; an empty string and an absent key decode the
   // same, and the explicit key says the command ran.

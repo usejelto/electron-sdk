@@ -59,7 +59,9 @@ export function truncate32(value: string): string {
  * to plant a fake `electron` package ahead of the real one on the resolution
  * path.
  */
-export function electronApp(proc: ProcessLike = process as unknown as ProcessLike): { getPath?(name: string): string; getVersion?(): string } | null {
+export function electronApp(
+  proc: ProcessLike = process as unknown as ProcessLike,
+): { getPath?(name: string): string; getVersion?(): string } | null {
   if (proc.type !== 'browser') return null
   try {
     const resolve = createRequire(import.meta.url)
@@ -73,7 +75,11 @@ export function electronApp(proc: ProcessLike = process as unknown as ProcessLik
 /** Raw observation: an explicit override, including empty, beats platform metadata. */
 export function resolveAppVersion(env: NodeJS.ProcessEnv): string {
   if (env['JELTO_APP_VERSION'] !== undefined) return env['JELTO_APP_VERSION']
-  try { return electronApp()?.getVersion?.() ?? '' } catch { return '' }
+  try {
+    return electronApp()?.getVersion?.() ?? ''
+  } catch {
+    return ''
+  }
 }
 
 export function knownAppVersion(value: string): boolean {
@@ -101,18 +107,20 @@ export function resolveOSVersion(): string {
 export function detectPlatform(env: NodeJS.ProcessEnv, log: Debug): Platform | null {
   const os = OS_BY_PROCESS_PLATFORM[process.platform]
   if (os === undefined) {
-    log.log(
-      `spec/wire-v1.md §5.2 \`os\` is macos|windows|linux; this build is ${process.platform}, so nothing can be sent`,
-    )
+    log.log(`spec/wire-v1.md §5.2 \`os\` is macos|windows|linux; this build is ${process.platform}, so nothing can be sent`)
     return null
   }
   const arch = ARCH_BY_PROCESS_ARCH[process.arch]
   if (arch === undefined) {
-    log.log(
-      `spec/wire-v1.md §5.2 \`arch\` is arm64|x64|x86; this build is ${process.arch}, so nothing can be sent`,
-    )
+    log.log(`spec/wire-v1.md §5.2 \`arch\` is arm64|x64|x86; this build is ${process.arch}, so nothing can be sent`)
     return null
   }
   const version = resolveAppVersion(env)
-  return { av: truncate32(version) || '1.0.0', observedVersion: knownAppVersion(version) ? version : undefined, os, osv: resolveOSVersion(), arch }
+  return {
+    av: truncate32(version) || '1.0.0',
+    observedVersion: knownAppVersion(version) ? version : undefined,
+    os,
+    osv: resolveOSVersion(),
+    arch,
+  }
 }

@@ -1,4 +1,3 @@
-
 import { Clock } from './clock.ts'
 import { Debug } from './debug.ts'
 import { Engine, type StateExport } from './engine.ts'
@@ -83,7 +82,8 @@ function build(
   const rawNow = env['JELTO_NOW']
   if (rawNow !== undefined) {
     pin = parseInstant(rawNow)
-    if (pin === null) log.log(`JELTO_NOW ${JSON.stringify(rawNow)} is not a whole number of milliseconds; the clock is not pinned`)
+    if (pin === null)
+      log.log(`JELTO_NOW ${JSON.stringify(rawNow)} is not a whole number of milliseconds; the clock is not pinned`)
   }
 
   const mock = env['JELTO_MOCK'] ?? null

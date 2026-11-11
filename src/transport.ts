@@ -91,7 +91,9 @@ export class Transport {
           if (MOCK_HEADER_SAFE.test(this.mock)) {
             headers['X-Mock'] = this.mock
           } else {
-            this.log?.log(`JELTO_MOCK ${JSON.stringify(this.mock)} is outside the header-safe ASCII range; dropping it rather than sending a malformed header`)
+            this.log?.log(
+              `JELTO_MOCK ${JSON.stringify(this.mock)} is outside the header-safe ASCII range; dropping it rather than sending a malformed header`,
+            )
           }
         }
 

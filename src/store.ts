@@ -95,13 +95,11 @@ export class Store {
         install_claimed: parsed.install_claimed === true,
         install_origin: parsed.install_origin === undefined ? undefined : installOrigin(parsed.install_origin),
         install_due_at: typeof parsed.install_due_at === 'string' ? parsed.install_due_at : base.install_due_at,
-        install_first_try:
-          typeof parsed.install_first_try === 'string' ? parsed.install_first_try : base.install_first_try,
+        install_first_try: typeof parsed.install_first_try === 'string' ? parsed.install_first_try : base.install_first_try,
         install_props: isStringMap(parsed.install_props) ? parsed.install_props : base.install_props,
         backoff_step_ms: typeof parsed.backoff_step_ms === 'number' ? parsed.backoff_step_ms : base.backoff_step_ms,
         backoff_next_at: typeof parsed.backoff_next_at === 'string' ? parsed.backoff_next_at : base.backoff_next_at,
-        backoff_failures:
-          typeof parsed.backoff_failures === 'number' ? parsed.backoff_failures : base.backoff_failures,
+        backoff_failures: typeof parsed.backoff_failures === 'number' ? parsed.backoff_failures : base.backoff_failures,
         stop_until: typeof parsed.stop_until === 'string' ? parsed.stop_until : base.stop_until,
         stop_probe_due: parsed.stop_probe_due === true,
       }
@@ -164,13 +162,23 @@ function isPendingUpdate(value: unknown): value is QueuedEvent {
   if (value === null || typeof value !== 'object') return false
   const event = value as Partial<QueuedEvent>
   const metadata = event.metadata
-  return typeof event.id === 'string' && event.id !== '' && event.n === 'app_updated'
-    && typeof event.t === 'string' && /^-?\d+$/.test(event.t)
-    && isStringMap(event.props) && typeof event.props['from_version'] === 'string'
-    && typeof event.props['to_version'] === 'string' && metadata !== null && typeof metadata === 'object'
-    && typeof metadata.av === 'string' && typeof metadata.os === 'string'
-    && typeof metadata.osv === 'string' && typeof metadata.arch === 'string'
-    && typeof metadata.installID === 'string'
-    && (metadata.slug === null || typeof metadata.slug === 'string')
-    && (metadata.clientVersion === null || typeof metadata.clientVersion === 'string')
+  return (
+    typeof event.id === 'string' &&
+    event.id !== '' &&
+    event.n === 'app_updated' &&
+    typeof event.t === 'string' &&
+    /^-?\d+$/.test(event.t) &&
+    isStringMap(event.props) &&
+    typeof event.props['from_version'] === 'string' &&
+    typeof event.props['to_version'] === 'string' &&
+    metadata !== null &&
+    typeof metadata === 'object' &&
+    typeof metadata.av === 'string' &&
+    typeof metadata.os === 'string' &&
+    typeof metadata.osv === 'string' &&
+    typeof metadata.arch === 'string' &&
+    typeof metadata.installID === 'string' &&
+    (metadata.slug === null || typeof metadata.slug === 'string') &&
+    (metadata.clientVersion === null || typeof metadata.clientVersion === 'string')
+  )
 }

@@ -20,7 +20,9 @@ for (const [cap, props] of [
     const path = join(dir, 'queue.jsonl')
     const originalAppend = fs.appendFileSync
     const originalWrite = fs.writeFileSync
-    let appends = 0, checkpoints = 0, writtenBytes = 0
+    let appends = 0,
+      checkpoints = 0,
+      writtenBytes = 0
     t.mock.method(fs, 'appendFileSync', (...args: Parameters<typeof fs.appendFileSync>) => {
       appends++
       writtenBytes += Buffer.byteLength(args[1])
@@ -39,7 +41,9 @@ for (const [cap, props] of [
     try {
       const queue = new EventQueue(dir, path)
       for (let i = 0; i < 1100; i++) queue.append(event(i, props))
-      appends = 0; checkpoints = 0; writtenBytes = 0
+      appends = 0
+      checkpoints = 0
+      writtenBytes = 0
       let inputBytes = 0
       for (let i = 1100; i < 3300; i++) {
         const next = event(i, props)

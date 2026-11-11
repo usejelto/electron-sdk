@@ -72,10 +72,7 @@ test('C15b: both instants reach the body bytes as bare JSON number literals', ()
     assert.equal(/"t":(-?[0-9]+)/.exec(bytes)?.[1], literal)
   }
   // The trap itself, stated as a test so nobody "simplifies" the encoder.
-  assert.equal(
-    JSON.stringify({ t: Number('99999999999999999999') }),
-    '{"t":100000000000000000000}',
-  )
+  assert.equal(JSON.stringify({ t: Number('99999999999999999999') }), '{"t":100000000000000000000}')
 })
 
 test('the event carries exactly §5.2’s app fields, in a fixed order', () => {
@@ -227,8 +224,6 @@ test('§6/§8: a 202 body is read for `rejected`, `stop` and `error` and nothing
   assert.equal(tooLong?.stop?.untilSeconds, null)
   // Scoped to the `"stop":{...}` object: an `until` planted in an unrelated
   // field (here, a rejection entry) must not be mistaken for the real one.
-  const scoped = parseResponse(
-    Buffer.from('{"rejected":[{"i":0,"until":5}],"stop":{"until":1756300000,"scope":"app"}}'),
-  )
+  const scoped = parseResponse(Buffer.from('{"rejected":[{"i":0,"until":5}],"stop":{"until":1756300000,"scope":"app"}}'))
   assert.equal(scoped?.stop?.untilSeconds, 1756300000n)
 })

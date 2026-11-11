@@ -70,8 +70,7 @@ export function createDispatcher(sdk: HostSdk, options: DispatcherOptions = {}):
     if (trackTimes.length > 0) {
       const sorted = [...trackTimes].sort((a, b) => a - b)
       reply.track_p50_us = sorted[Math.floor((sorted.length * 50) / 100)] ?? 0
-      reply.track_p99_us =
-        sorted[Math.min(Math.floor((sorted.length * 99) / 100), sorted.length - 1)] ?? 0
+      reply.track_p99_us = sorted[Math.min(Math.floor((sorted.length * 99) / 100), sorted.length - 1)] ?? 0
     }
     return reply
   }
@@ -189,7 +188,9 @@ export function createDispatcher(sdk: HostSdk, options: DispatcherOptions = {}):
         return { cmd, ok: true }
 
       case 'legacyversion':
-        return sdk.legacyVersion() ? { cmd, ok: true } : { cmd, ok: false, error: 'legacyversion requires initialized state with no pending transition' }
+        return sdk.legacyVersion()
+          ? { cmd, ok: true }
+          : { cmd, ok: false, error: 'legacyversion requires initialized state with no pending transition' }
 
       case 'disable':
         sdk.disable()

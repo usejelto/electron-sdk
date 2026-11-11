@@ -12,7 +12,6 @@ import { Store } from './store.ts'
 import { EventQueue, QUEUE_MAX_EVENTS } from './queue.ts'
 import type { QueuedEvent } from './wire.ts'
 
-
 interface Recorded {
   body: string
   events: Array<Record<string, unknown>>
@@ -97,7 +96,6 @@ class Mock {
   }
 }
 
-
 interface Rig {
   sdk: ConformanceSdk
   stderr(): string
@@ -140,11 +138,11 @@ test('install origin is optional host knowledge and never a heartbeat property',
       sdk.init(KEY, undefined, undefined, origin as 'new' | 'existing' | 'unknown' | undefined)
       sdk.setProps({ license: 'paid', install_origin: 'new' })
       await sdk.advance(3000)
-      const events = mock.requests.flatMap(r => r.events)
+      const events = mock.requests.flatMap((r) => r.events)
       const expected = origin === 'new' || origin === 'existing' ? origin : 'unknown'
       assert.equal(sdk.exportState().install_origin, expected)
-      assert.deepEqual(events.find(e => e['n'] === 'install')?.['props'], { install_origin: expected })
-      assert.deepEqual(events.find(e => e['n'] === 'heartbeat')?.['props'], { license: 'paid' })
+      assert.deepEqual(events.find((e) => e['n'] === 'install')?.['props'], { install_origin: expected })
+      assert.deepEqual(events.find((e) => e['n'] === 'heartbeat')?.['props'], { license: 'paid' })
       sdk.disable()
     })
   }
@@ -170,25 +168,33 @@ test('pending install origin and its retry survive relaunch with a different hos
       next.init(KEY, undefined, undefined, 'new')
       assert.equal(next.exportState().install_origin, 'existing')
       next.disable()
-    } finally { await next.stop() }
+    } finally {
+      await next.stop()
+    }
   })
 })
 
 test('legacy pending claims keep omission instead of taking a later initialization hint', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'jelto-legacy-origin-'))
   try {
-    new Store(dir).update(state => {
+    new Store(dir).update((state) => {
       state.install_id = '3f1b6c3e-0f2a-4d55-9b21-2f5c0f6a1234'
       state.install_due_at = '0'
     })
-    await withRig(async ({ sdk }, mock) => {
-      sdk.init(KEY, undefined, undefined, 'new')
-      await sdk.advance(3000)
-      assert.equal(sdk.exportState().install_origin, undefined)
-      assert.equal(mock.requests.flatMap(r => r.events).find(e => e['n'] === 'install')?.['props'], undefined)
-      sdk.disable()
-    }, { JELTO_NOW: '0' }, { dir })
-  } finally { rmSync(dir, { recursive: true, force: true }) }
+    await withRig(
+      async ({ sdk }, mock) => {
+        sdk.init(KEY, undefined, undefined, 'new')
+        await sdk.advance(3000)
+        assert.equal(sdk.exportState().install_origin, undefined)
+        assert.equal(mock.requests.flatMap((r) => r.events).find((e) => e['n'] === 'install')?.['props'], undefined)
+        sdk.disable()
+      },
+      { JELTO_NOW: '0' },
+      { dir },
+    )
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
 })
 
 test('reset replaces pending origin with unknown; disable and init accepts a fresh host hint', async () => {
@@ -200,13 +206,19 @@ test('reset replaces pending origin with unknown; disable and init accepts a fre
     assert.notEqual(sdk.installId(), previous)
     assert.equal(sdk.exportState().install_origin, 'unknown')
     await sdk.advance(3000)
-    const installs = mock.requests.flatMap(r => r.events).filter(e => e['n'] === 'install')
+    const installs = mock.requests.flatMap((r) => r.events).filter((e) => e['n'] === 'install')
     assert.equal(installs.length, 1)
     assert.deepEqual(installs[0]?.['props'], { install_origin: 'unknown' })
     sdk.disable()
     sdk.init(KEY, undefined, undefined, 'new')
     await sdk.advance(3000)
-    assert.deepEqual(mock.requests.flatMap(r => r.events).filter(e => e['n'] === 'install').at(-1)?.['props'], { install_origin: 'new' })
+    assert.deepEqual(
+      mock.requests
+        .flatMap((r) => r.events)
+        .filter((e) => e['n'] === 'install')
+        .at(-1)?.['props'],
+      { install_origin: 'new' },
+    )
     sdk.disable()
   })
 })
@@ -221,20 +233,29 @@ test('scheduled install flushes after the init flush and final refusals do not r
       state.last_heartbeat_day = '0'
     })
     try {
-      await withRig(async (rig, mock) => {
-        mock.always({ status })
-        rig.sdk.init(KEY)
-        await rig.sdk.advance(3000)
-        assert.equal(mock.requests.length, 0)
-        await rig.sdk.advance(8000)
-        assert.deepEqual(mock.requests.map((request) => request.names), [['install']])
-        await rig.sdk.advance(4000)
-        assert.equal(mock.requests.length, status === 503 ? 2 : 1)
-        if (status === 503) assert.equal(mock.requests[0]!.body, mock.requests[1]!.body)
-        assert.equal(rig.sdk.exportState().install_claimed, status === 202)
-        rig.sdk.disable()
-      }, { JELTO_NOW: '0' }, { dir })
-    } finally { rmSync(dir, { recursive: true, force: true }) }
+      await withRig(
+        async (rig, mock) => {
+          mock.always({ status })
+          rig.sdk.init(KEY)
+          await rig.sdk.advance(3000)
+          assert.equal(mock.requests.length, 0)
+          await rig.sdk.advance(8000)
+          assert.deepEqual(
+            mock.requests.map((request) => request.names),
+            [['install']],
+          )
+          await rig.sdk.advance(4000)
+          assert.equal(mock.requests.length, status === 503 ? 2 : 1)
+          if (status === 503) assert.equal(mock.requests[0]!.body, mock.requests[1]!.body)
+          assert.equal(rig.sdk.exportState().install_claimed, status === 202)
+          rig.sdk.disable()
+        },
+        { JELTO_NOW: '0' },
+        { dir },
+      )
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   }
 })
 
@@ -296,9 +317,19 @@ function seedVersion(dir: string, version: string, pending?: QueuedEvent): Store
 }
 
 const interruptedUpdate: QueuedEvent = {
-  id: '01991ba0-4000-7000-8000-000000000001', n: 'app_updated', t: '1788134400000',
+  id: '01991ba0-4000-7000-8000-000000000001',
+  n: 'app_updated',
+  t: '1788134400000',
   props: { from_version: 'A', to_version: 'B' },
-  metadata: { installID: '3f1b6c3e-0f2a-4d55-9b21-2f5c0f6a1234', av: 'B', os: 'macos', osv: '14', arch: 'arm64', slug: 'original', clientVersion: 'electron/1' },
+  metadata: {
+    installID: '3f1b6c3e-0f2a-4d55-9b21-2f5c0f6a1234',
+    av: 'B',
+    os: 'macos',
+    osv: '14',
+    arch: 'arm64',
+    slug: 'original',
+    clientVersion: 'electron/1',
+  },
 }
 
 test('app update recovery resumes journal-only and already-queued commits with one immutable event', async () => {
@@ -307,23 +338,35 @@ test('app update recovery resumes journal-only and already-queued commits with o
     const store = seedVersion(dir, 'B', interruptedUpdate)
     if (queued) new EventQueue(dir, store.queuePath).recover(interruptedUpdate)
     try {
-      await withRig(async ({ sdk }, mock) => {
-        sdk.init(KEY, 'new-slug')
-        await sdk.advance(3000)
-        const updates = mock.requests.flatMap((request) => request.events).filter((event) => event['n'] === 'app_updated')
-        assert.equal(updates.length, 2)
-        assert.deepEqual(updates.map((event) => event['props']), [{ from_version: 'A', to_version: 'B' }, { from_version: 'B', to_version: 'C' }])
-        const recovered = updates[0]!
-        assert.equal(recovered['id'], interruptedUpdate.id)
-        assert.equal(recovered['t'], Number(interruptedUpdate.t))
-        assert.equal(recovered['av'], 'B')
-        assert.equal(recovered['a'], 'original')
-        assert.equal(recovered['v'], 'electron/1')
-        assert.equal(recovered['osv'], '14')
-        assert.equal(sdk.exportState().last_app_version, 'C')
-        assert.equal(new Store(dir).load().pending_update, undefined)
-      }, { JELTO_NOW: '1788134401000', JELTO_APP_VERSION: 'C' }, { dir })
-    } finally { rmSync(dir, { recursive: true, force: true }) }
+      await withRig(
+        async ({ sdk }, mock) => {
+          sdk.init(KEY, 'new-slug')
+          await sdk.advance(3000)
+          const updates = mock.requests.flatMap((request) => request.events).filter((event) => event['n'] === 'app_updated')
+          assert.equal(updates.length, 2)
+          assert.deepEqual(
+            updates.map((event) => event['props']),
+            [
+              { from_version: 'A', to_version: 'B' },
+              { from_version: 'B', to_version: 'C' },
+            ],
+          )
+          const recovered = updates[0]!
+          assert.equal(recovered['id'], interruptedUpdate.id)
+          assert.equal(recovered['t'], Number(interruptedUpdate.t))
+          assert.equal(recovered['av'], 'B')
+          assert.equal(recovered['a'], 'original')
+          assert.equal(recovered['v'], 'electron/1')
+          assert.equal(recovered['osv'], '14')
+          assert.equal(sdk.exportState().last_app_version, 'C')
+          assert.equal(new Store(dir).load().pending_update, undefined)
+        },
+        { JELTO_NOW: '1788134401000', JELTO_APP_VERSION: 'C' },
+        { dir },
+      )
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   }
 })
 
@@ -332,19 +375,25 @@ test('failed update commit does not advance baseline or send; a later successful
   seedVersion(dir, 'A')
   mkdirSync(join(dir, 'state.json.tmp'))
   try {
-    await withRig(async ({ sdk }, mock) => {
-      sdk.init(KEY)
-      await sdk.advance(3000)
-      assert.equal(mock.requests.length, 0)
-      assert.equal(sdk.exportState().last_app_version, 'A')
-      assert.equal(new Store(dir).load().last_app_version, 'A')
-      rmSync(join(dir, 'state.json.tmp'), { recursive: true })
-      await sdk.advance(3000)
-      const update = mock.requests.flatMap((request) => request.events).find((event) => event['n'] === 'app_updated')!
-      assert.equal(update['t'], 1788134400000)
-      assert.deepEqual(update['props'], { from_version: 'A', to_version: 'B' })
-    }, { JELTO_NOW: '1788134400000', JELTO_APP_VERSION: 'B' }, { dir })
-  } finally { rmSync(dir, { recursive: true, force: true }) }
+    await withRig(
+      async ({ sdk }, mock) => {
+        sdk.init(KEY)
+        await sdk.advance(3000)
+        assert.equal(mock.requests.length, 0)
+        assert.equal(sdk.exportState().last_app_version, 'A')
+        assert.equal(new Store(dir).load().last_app_version, 'A')
+        rmSync(join(dir, 'state.json.tmp'), { recursive: true })
+        await sdk.advance(3000)
+        const update = mock.requests.flatMap((request) => request.events).find((event) => event['n'] === 'app_updated')!
+        assert.equal(update['t'], 1788134400000)
+        assert.deepEqual(update['props'], { from_version: 'A', to_version: 'B' })
+      },
+      { JELTO_NOW: '1788134400000', JELTO_APP_VERSION: 'B' },
+      { dir },
+    )
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
 })
 
 test('failed queue handoff retains the update intent and blocks dispatch until recovery succeeds', async () => {
@@ -352,20 +401,26 @@ test('failed queue handoff retains the update intent and blocks dispatch until r
   seedVersion(dir, 'B', interruptedUpdate)
   mkdirSync(join(dir, 'queue.jsonl.tmp'))
   try {
-    await withRig(async ({ sdk }, mock) => {
-      sdk.init(KEY)
-      await sdk.advance(3000)
-      assert.equal(mock.requests.length, 0)
-      assert.equal(new Store(dir).load().pending_update?.id, interruptedUpdate.id)
-      assert.equal(sdk.legacyVersion(), false)
-      rmSync(join(dir, 'queue.jsonl.tmp'), { recursive: true })
-      await sdk.advance(3000)
-      const updates = mock.requests.flatMap((request) => request.events).filter((event) => event['n'] === 'app_updated')
-      assert.equal(updates.length, 1)
-      assert.equal(updates[0]!['id'], interruptedUpdate.id)
-      assert.equal(new Store(dir).load().pending_update, undefined)
-    }, { JELTO_NOW: '1788134400000', JELTO_APP_VERSION: 'B' }, { dir })
-  } finally { rmSync(dir, { recursive: true, force: true }) }
+    await withRig(
+      async ({ sdk }, mock) => {
+        sdk.init(KEY)
+        await sdk.advance(3000)
+        assert.equal(mock.requests.length, 0)
+        assert.equal(new Store(dir).load().pending_update?.id, interruptedUpdate.id)
+        assert.equal(sdk.legacyVersion(), false)
+        rmSync(join(dir, 'queue.jsonl.tmp'), { recursive: true })
+        await sdk.advance(3000)
+        const updates = mock.requests.flatMap((request) => request.events).filter((event) => event['n'] === 'app_updated')
+        assert.equal(updates.length, 1)
+        assert.equal(updates[0]!['id'], interruptedUpdate.id)
+        assert.equal(new Store(dir).load().pending_update, undefined)
+      },
+      { JELTO_NOW: '1788134400000', JELTO_APP_VERSION: 'B' },
+      { dir },
+    )
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
 })
 
 test('recovery does not resurrect an update evicted after queue handoff but before intent retirement', async () => {
@@ -379,19 +434,24 @@ test('recovery does not resurrect an update evicted after queue handoff but befo
   }
   assert.equal(queue.contains('app_updated'), false)
   try {
-    await withRig(async ({ sdk }, mock) => {
-      sdk.init(KEY)
-      await sdk.advance(3000)
-      assert.equal(mock.requests.flatMap((request) => request.names).includes('app_updated'), false)
-      assert.equal(new Store(dir).load().pending_update, undefined)
-    }, { JELTO_NOW: '1788134400000', JELTO_APP_VERSION: 'B' }, { dir })
-  } finally { rmSync(dir, { recursive: true, force: true }) }
+    await withRig(
+      async ({ sdk }, mock) => {
+        sdk.init(KEY)
+        await sdk.advance(3000)
+        assert.equal(mock.requests.flatMap((request) => request.names).includes('app_updated'), false)
+        assert.equal(new Store(dir).load().pending_update, undefined)
+      },
+      { JELTO_NOW: '1788134400000', JELTO_APP_VERSION: 'B' },
+      { dir },
+    )
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
 })
 
 function heartbeats(mock: Mock): number {
   return mock.requests.flatMap((request) => request.names).filter((name) => name === 'heartbeat').length
 }
-
 
 test('C5: before init nothing happens — no request, no socket, no file', async () => {
   await withRig(async (rig, mock) => {
@@ -446,7 +506,7 @@ test('C2/C3: one heartbeat per UTC day, and the install id survives a relaunch',
   }
 })
 
-test('C3b: a running SDK sends the new UTC day\'s heartbeat without another init or exit', async () => {
+test("C3b: a running SDK sends the new UTC day's heartbeat without another init or exit", async () => {
   await withRig(async ({ sdk }, mock) => {
     sdk.init(KEY)
     await sdk.advance(3_000)
@@ -576,8 +636,10 @@ test('C7: a batch is capped at 100 events, and the queue drains in order', async
     assert.equal(mock.requests[1]?.events.length, 100)
     assert.equal(mock.requests[2]?.events.length, 52) // 250 tracks + the heartbeat + the install
     assert.equal(mock.requests[0]?.names[0], 'heartbeat')
-    assert.deepEqual(mock.requests.flatMap((r) => r.names).filter((name) => name.startsWith('x')),
-      Array.from({ length: 250 }, (_, i) => `x${i}`))
+    assert.deepEqual(
+      mock.requests.flatMap((r) => r.names).filter((name) => name.startsWith('x')),
+      Array.from({ length: 250 }, (_, i) => `x${i}`),
+    )
   })
 })
 
@@ -605,7 +667,10 @@ test('C9b: a 402 is final too — no retry, no backoff loop, and one line names 
     rig.sdk.track('y')
     await rig.sdk.advance(6_000)
     assert.equal(mock.requests.length, 2)
-    assert.deepEqual(mock.requests.flatMap((r) => r.names), ['heartbeat', 'x', 'install', 'y'])
+    assert.deepEqual(
+      mock.requests.flatMap((r) => r.names),
+      ['heartbeat', 'x', 'install', 'y'],
+    )
     assert.equal(rig.sdk.exportState().backoff_step_ms, undefined)
     assert.ok(rig.stderr().includes('payment_required'), rig.stderr())
   })
@@ -627,7 +692,10 @@ test('C8: a retryable refusal resends the SAME batch with the SAME ids', async (
     // Past the deadline, the identical batch goes out again.
     await rig.sdk.advance(4_000)
     assert.ok(mock.requests.length >= 2)
-    assert.deepEqual(mock.requests[1]!.events.map((event) => event['id']), first)
+    assert.deepEqual(
+      mock.requests[1]!.events.map((event) => event['id']),
+      first,
+    )
   })
 })
 
@@ -684,9 +752,10 @@ test('C16: the switch pauses, then ONE heartbeat alone, then the queue drains', 
     assert.deepEqual(mock.requests[3]?.names, ['y'])
     // The five x's were in the batch the switch answered; a 202 accepted that
     // envelope however many events it rejected, so nothing re-queues them.
-    assert.deepEqual(mock.requests.flatMap((r) => r.names), [
-      'heartbeat', 'install', 'x', 'x', 'x', 'x', 'x', 'heartbeat', 'y',
-    ])
+    assert.deepEqual(
+      mock.requests.flatMap((r) => r.names),
+      ['heartbeat', 'install', 'x', 'x', 'x', 'x', 'x', 'heartbeat', 'y'],
+    )
     const text = rig.stderr()
     assert.ok(text.includes('kill switch: no request until'), text)
     assert.ok(text.includes('kill switch elapsed'), text)
@@ -712,7 +781,10 @@ test('C16b: an app SDK ignores a stop scoped to web', async () => {
     rig.sdk.track('y')
     await rig.sdk.advance(6_000)
     assert.equal(mock.requests.length, 2)
-    assert.deepEqual(mock.requests.flatMap((r) => r.names), ['heartbeat', 'install', 'y'])
+    assert.deepEqual(
+      mock.requests.flatMap((r) => r.names),
+      ['heartbeat', 'install', 'y'],
+    )
     assert.equal(rig.sdk.exportState().stop_until, undefined)
     assert.ok(rig.stderr().includes('ignoring a stop scoped to web'), rig.stderr())
   })
@@ -779,7 +851,12 @@ test('C20: onboarding IS track, and its event is congruent with the sugar-free c
     await rig.sdk.advance(6_000)
     const events = mock.requests[0]!.events
     assert.deepEqual(mock.requests[0]!.names, [
-      'heartbeat', 'onboarding:permissions', 'onboarding:driver', 'onboarding:tour', 'onboarding:permissions', 'install',
+      'heartbeat',
+      'onboarding:permissions',
+      'onboarding:driver',
+      'onboarding:tour',
+      'onboarding:permissions',
+      'install',
     ])
     assert.deepEqual(events[1]?.['props'], { status: 'ok' })
     assert.deepEqual(events[2]?.['props'], { status: 'fail', reason: 'no_kext' })
@@ -809,7 +886,10 @@ test('C20b/W2/W3/C22c: every client-side drop keeps its event off the wire', asy
     rig.sdk.setProps({ license: 'a'.repeat(30) })
     rig.sdk.track('good_name')
     await rig.sdk.advance(6_000)
-    assert.deepEqual(mock.requests.flatMap((r) => r.names), ['heartbeat', 'good_name', 'install'])
+    assert.deepEqual(
+      mock.requests.flatMap((r) => r.names),
+      ['heartbeat', 'good_name', 'install'],
+    )
     // C22c: neither reached the wire, and no change means no extra heartbeat.
     assert.equal(mock.requests[0]?.events[0]?.['props'], undefined)
     assert.equal(mock.requests.length, 1)
@@ -925,21 +1005,18 @@ test('spec/sdk-conformance.md §3.2: the export carries these keys and no others
 })
 
 test('C1: init returns before any of the work, and a thousand tracks still stop', async () => {
-  await withRig(
-    async (rig, mock) => {
-      const started = process.hrtime.bigint()
-      rig.sdk.init(KEY)
-      const micros = Number(process.hrtime.bigint() - started) / 1000
-      assert.ok(micros < 5_000, `init took ${micros} us`)
-      for (let i = 0; i < 1000; i += 1) rig.sdk.track('x')
-      const stopStart = Date.now()
-      await rig.sdk.stop()
-      assert.ok(Date.now() - stopStart < 1_000, 'the termination flush is bounded')
-      assert.ok(mock.requests.length > 0)
-      assert.ok(existsSync(rig.dir))
-    },
-    {},
-  )
+  await withRig(async (rig, mock) => {
+    const started = process.hrtime.bigint()
+    rig.sdk.init(KEY)
+    const micros = Number(process.hrtime.bigint() - started) / 1000
+    assert.ok(micros < 5_000, `init took ${micros} us`)
+    for (let i = 0; i < 1000; i += 1) rig.sdk.track('x')
+    const stopStart = Date.now()
+    await rig.sdk.stop()
+    assert.ok(Date.now() - stopStart < 1_000, 'the termination flush is bounded')
+    assert.ok(mock.requests.length > 0)
+    assert.ok(existsSync(rig.dir))
+  }, {})
 })
 
 test('the SDK never throws into the host, whatever it is handed', async () => {
@@ -1002,15 +1079,21 @@ test('an install_id outside the canonical UUID grammar is replaced, not trusted'
   })
   const v4ish = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
   try {
-    await withRig(async (rig) => {
-      rig.sdk.init(KEY)
-      await rig.sdk.advance(0)
-      const id = rig.sdk.installId()
-      assert.match(id, v4ish)
-      assert.notEqual(id, 'not-a-uuid')
-      assert.match(new Store(dir).load().install_id, v4ish)
-    }, { JELTO_NOW: '0' }, { dir })
-  } finally { rmSync(dir, { recursive: true, force: true }) }
+    await withRig(
+      async (rig) => {
+        rig.sdk.init(KEY)
+        await rig.sdk.advance(0)
+        const id = rig.sdk.installId()
+        assert.match(id, v4ish)
+        assert.notEqual(id, 'not-a-uuid')
+        assert.match(new Store(dir).load().install_id, v4ish)
+      },
+      { JELTO_NOW: '0' },
+      { dir },
+    )
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
 })
 
 test('a JELTO_MOCK value hostile to headers is dropped, not fatal — events still get delivered', async () => {

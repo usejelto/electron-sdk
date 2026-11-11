@@ -2,12 +2,7 @@
 
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import {
-  BACKOFF_CEILING_MS,
-  headerNote,
-  nextBackoff,
-  retryAfterMS,
-} from './backoff.ts'
+import { BACKOFF_CEILING_MS, headerNote, nextBackoff, retryAfterMS } from './backoff.ts'
 
 test('retryAfterMS reads delay-seconds and NOTHING else', () => {
   assert.equal(retryAfterMS('2'), 2_000)
@@ -49,10 +44,7 @@ test('C8c arm C: an unparseable header is absent, never zero', () => {
   const result = nextBackoff(0, 'soon', 0n, 1.0)
   assert.equal(result.waitMS, 1_000) // not 0
   assert.equal(result.source, 'backoff')
-  assert.equal(
-    headerNote('soon'),
-    'Retry-After: "soon" is not delay-seconds and is treated as absent (spec/wire-v1.md §9)',
-  )
+  assert.equal(headerNote('soon'), 'Retry-After: "soon" is not delay-seconds and is treated as absent (spec/wire-v1.md §9)')
 })
 
 test('C8c arm D: Retry-After 1 at the tenth refusal neither shortens nor resets', () => {

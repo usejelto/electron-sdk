@@ -121,5 +121,11 @@ test('C17: the payload line carries the body bytes unaltered', () => {
 test('a caller-supplied newline cannot split a log line', () => {
   const sink = capture()
   gateEventName('bad\nname', sink.log)
-  assert.equal(sink.text().split('\n').filter((line) => line !== '').length, 1)
+  assert.equal(
+    sink
+      .text()
+      .split('\n')
+      .filter((line) => line !== '').length,
+    1,
+  )
 })

@@ -26,11 +26,7 @@ export const DEFAULT_ENDPOINT = 'https://in.jelto.io/v1/e'
  * environment variable for itself, so nothing was ever delivered and nothing
  * surfaced.
  */
-export function resolveEndpoint(
-  argument: string | undefined,
-  envValue: string | undefined,
-  log?: Debug,
-): string | null {
+export function resolveEndpoint(argument: string | undefined, envValue: string | undefined, log?: Debug): string | null {
   for (const [value, source] of [
     [argument, 'endpoint passed to init'],
     [envValue, 'JELTO_ENDPOINT'],
@@ -50,15 +46,21 @@ export function validateEndpoint(value: string, source: string, log?: Debug): st
   try {
     url = new URL(value)
   } catch {
-    log?.log(`${source} ${JSON.stringify(value)} is not an absolute URL; spec/wire-v1.md §1 makes the SDK inactive rather than falling through`)
+    log?.log(
+      `${source} ${JSON.stringify(value)} is not an absolute URL; spec/wire-v1.md §1 makes the SDK inactive rather than falling through`,
+    )
     return null
   }
   if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-    log?.log(`${source} ${JSON.stringify(value)} is not http(s); spec/wire-v1.md §1 makes the SDK inactive rather than falling through`)
+    log?.log(
+      `${source} ${JSON.stringify(value)} is not http(s); spec/wire-v1.md §1 makes the SDK inactive rather than falling through`,
+    )
     return null
   }
   if (url.username !== '' || url.password !== '') {
-    log?.log(`${source} ${JSON.stringify(value)} carries userinfo, which spec/wire-v1.md §1 forbids; the SDK is inactive rather than falling through`)
+    log?.log(
+      `${source} ${JSON.stringify(value)} carries userinfo, which spec/wire-v1.md §1 forbids; the SDK is inactive rather than falling through`,
+    )
     return null
   }
   return value

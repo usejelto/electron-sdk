@@ -5,13 +5,7 @@
 // setImmediate; a synchronous public call that arrives first runs it eagerly.
 // This keeps bootstrap out of init while installId/exportState can return current state.
 
-import {
-  BACKOFF_CEILING_MS,
-  headerNote,
-  JITTER_HIGH,
-  JITTER_LOW,
-  nextBackoff,
-} from './backoff.ts'
+import { BACKOFF_CEILING_MS, headerNote, JITTER_HIGH, JITTER_LOW, nextBackoff } from './backoff.ts'
 import { Clock } from './clock.ts'
 import { Debug } from './debug.ts'
 import { validateEndpoint } from './endpoint.ts'
@@ -168,7 +162,6 @@ export class Engine {
     this.env = options.env
   }
 
-
   /**
    * Returns immediately, with all work on a background path (C1). init only
    * happens once — except after `disable()`, whose "no-ops UNTIL THE NEXT
@@ -186,9 +179,10 @@ export class Engine {
     // §1's explicit-argument tier: an invalid explicit endpoint is inactive
     // (`null`) and never falls through to `this.defaultEndpoint` -- an absent
     // one (undefined/empty) is what falls through to it.
-    this.endpoint = endpoint !== undefined && endpoint !== ''
-      ? validateEndpoint(endpoint, 'endpoint passed to init', this.log)
-      : this.defaultEndpoint
+    this.endpoint =
+      endpoint !== undefined && endpoint !== ''
+        ? validateEndpoint(endpoint, 'endpoint passed to init', this.log)
+        : this.defaultEndpoint
     this.transport?.close()
     this.transport = null
     const reArm = this.started && this.disabled
@@ -266,16 +260,19 @@ export class Engine {
     const now = this.clock.now()
     const id = uuidV4()
     if (!this.queue.discardIdentityEvents()) return
-    if (!this.store.commit((state) => {
-      delete state.pending_update
-      state.last_app_version = this.platform?.observedVersion ?? ''
-      state.install_id = id
-      state.install_claimed = false
-      state.install_origin = 'unknown'
-      state.install_due_at = now.toString()
-      state.install_first_try = ''
-      state.last_heartbeat_day = ''
-    })) return
+    if (
+      !this.store.commit((state) => {
+        delete state.pending_update
+        state.last_app_version = this.platform?.observedVersion ?? ''
+        state.install_id = id
+        state.install_claimed = false
+        state.install_origin = 'unknown'
+        state.install_due_at = now.toString()
+        state.install_first_try = ''
+        state.last_heartbeat_day = ''
+      })
+    )
+      return
     this.stagedUpdate = null
     this.observationComplete = true
     this.installEnqueuedThisRun = this.queue.contains('install')
@@ -299,7 +296,6 @@ export class Engine {
     this.store.wipe()
     this.notify()
   }
-
 
   /**
    * A read and only a read: before `init` this creates nothing, loads nothing
@@ -331,9 +327,10 @@ export class Engine {
   /** Conformance-only migration seam; absent from the customer Jelto interface. */
   legacyVersion(): boolean {
     if (!this.ready() || this.store.get().pending_update !== undefined) return false
-    return this.store.commit((state) => { state.last_app_version = '' })
+    return this.store.commit((state) => {
+      state.last_app_version = ''
+    })
   }
-
 
   /**
    * Unpinned: really sleep. C7's "2 s ± 0.5 s", C8's schedule and C22's "<= 2 s"
@@ -373,9 +370,7 @@ export class Engine {
       await realSleep(5)
     }
     if (this.queue.length > 0) {
-      this.log.log(
-        `termination flush gave up with ${this.queue.length} events queued (best effort; the flush is bounded)`,
-      )
+      this.log.log(`termination flush gave up with ${this.queue.length} events queued (best effort; the flush is bounded)`)
     }
 
     this.quit = true
@@ -385,7 +380,6 @@ export class Engine {
     if (this.pumpDone !== null) await raceTimeout(this.pumpDone, 2_000)
     this.closeTransport()
   }
-
 
   /**
    * The gate on every public call: false before `init` and after `disable()`,
@@ -468,7 +462,12 @@ export class Engine {
     const pending = this.store.get().pending_update
     if (pending !== undefined) {
       if (!this.queue.recover(pending)) return false
-      if (!this.store.commit((state) => { delete state.pending_update })) return false
+      if (
+        !this.store.commit((state) => {
+          delete state.pending_update
+        })
+      )
+        return false
     }
     const current = this.platform?.observedVersion
     const previous = this.store.get().last_app_version
@@ -477,24 +476,33 @@ export class Engine {
       return true
     }
     if (!knownAppVersion(previous)) {
-      if (!this.store.commit((state) => { state.last_app_version = current })) return false
+      if (
+        !this.store.commit((state) => {
+          state.last_app_version = current
+        })
+      )
+        return false
       this.observationComplete = true
       return true
     }
     this.stagedUpdate ??= {
-      id: uuidV7(this.observedAt), n: 'app_updated', t: this.observedAt.toString(),
+      id: uuidV7(this.observedAt),
+      n: 'app_updated',
+      t: this.observedAt.toString(),
       props: { from_version: previous, to_version: current },
       metadata: { ...this.eventMetadata()!, av: current, installID: this.installIDValue },
     }
     const event = this.stagedUpdate
-    if (!this.store.commit((state) => {
-      state.last_app_version = current
-      state.pending_update = event
-    })) return false
+    if (
+      !this.store.commit((state) => {
+        state.last_app_version = current
+        state.pending_update = event
+      })
+    )
+      return false
     this.stagedUpdate = null
     return this.observeAppVersion()
   }
-
 
   private startPump(): void {
     if (this.pumpActive) return
@@ -587,12 +595,21 @@ export class Engine {
 
     // A queued install is already the retry; never enqueue a second copy (C4b).
     const dueAt = parseInstant(state.install_due_at)
-    if (!state.install_claimed && !this.installEnqueuedThisRun && dueAt !== null && now >= dueAt && !this.queue.contains('install')) {
+    if (
+      !state.install_claimed &&
+      !this.installEnqueuedThisRun &&
+      dueAt !== null &&
+      now >= dueAt &&
+      !this.queue.contains('install')
+    ) {
       this.store.update((next) => {
         if (next.install_first_try === '') next.install_first_try = now.toString()
       })
       this.installEnqueuedThisRun = true
-      this.enqueue({ id: uuidV7(now), n: 'install', t: now.toString(),
+      this.enqueue({
+        id: uuidV7(now),
+        n: 'install',
+        t: now.toString(),
         ...(state.install_origin === undefined ? {} : { props: { install_origin: state.install_origin } }),
       })
       // Queue immediately while preserving the two-second initial flush (C7).
@@ -668,7 +685,6 @@ export class Engine {
     const retryAt = parseInstant(state.backoff_next_at)
     return retryAt !== null && now < retryAt
   }
-
 
   private encodeContext(): EncodeContext | null {
     const platform = this.platform
@@ -846,17 +862,13 @@ export class Engine {
       state.stop_until = untilMS.toString()
       state.stop_probe_due = true
     })
-    this.log.log(
-      `kill switch: no request until ${untilMS.toString()} ms, scope ${stop.scope} (spec/wire-v1.md §8)`,
-    )
+    this.log.log(`kill switch: no request until ${untilMS.toString()} ms, scope ${stop.scope} (spec/wire-v1.md §8)`)
   }
 
   private finalRefusal(outcome: Outcome): void {
     const parsed = parseResponse(outcome.body)
     const suffix = parsed !== null && parsed.error !== '' ? ` ${parsed.error}` : ''
-    this.log.log(
-      `batch dropped: status=${outcome.status}${suffix} -- final, not retried (spec/wire-v1.md §2a)`,
-    )
+    this.log.log(`batch dropped: status=${outcome.status}${suffix} -- final, not retried (spec/wire-v1.md §2a)`)
   }
 
   private applyBackoff(answeredAt: bigint, outcome: Outcome): void {

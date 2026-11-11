@@ -3,9 +3,7 @@
 
 export type PropValue = string | number | boolean
 
-export type ParsedProps =
-  | { ok: true; props: Record<string, PropValue> | undefined }
-  | { ok: false; error: string }
+export type ParsedProps = { ok: true; props: Record<string, PropValue> | undefined } | { ok: false; error: string }
 
 /**
  * Parses the token at `at`, if there is one. An absent or blank token is not an

@@ -23,10 +23,7 @@ test('§1: the environment beats the default', () => {
 })
 
 test('§1: an explicit endpoint beats the environment', () => {
-  assert.equal(
-    resolveEndpoint('https://a.example.com/v1/e', 'http://127.0.0.1:8080/v1/e'),
-    'https://a.example.com/v1/e',
-  )
+  assert.equal(resolveEndpoint('https://a.example.com/v1/e', 'http://127.0.0.1:8080/v1/e'), 'https://a.example.com/v1/e')
 })
 
 test('§1: an empty value is an absent value, at every level', () => {
@@ -64,7 +61,9 @@ test('§1: engine-level — an invalid endpoint sends nothing, ever, after init,
     res.end('{}')
   })
   let requests = 0
-  server.on('request', () => { requests += 1 })
+  server.on('request', () => {
+    requests += 1
+  })
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
   const address = server.address()
   const port = typeof address === 'object' && address !== null ? address.port : 0

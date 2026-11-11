@@ -112,10 +112,7 @@ export class EventQueue {
 
   private trim(): number {
     let dropped = 0
-    while (
-      this.entries.length > QUEUE_MAX_EVENTS ||
-      (this.entries.length > 1 && this.total > QUEUE_MAX_BYTES)
-    ) {
+    while (this.entries.length > QUEUE_MAX_EVENTS || (this.entries.length > 1 && this.total > QUEUE_MAX_BYTES)) {
       this.total -= this.entries[0]!.bytes
       this.entries.shift()
       dropped += 1

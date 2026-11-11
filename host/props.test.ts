@@ -43,10 +43,7 @@ test('nothing about a value is judged here', () => {
   // scenarios assert on.
   const long = 'a'.repeat(200)
   assert.deepEqual(propsOf(`track x {"k":"${long}"}`, 2), { k: long })
-  const wide = propsOf(
-    'track y {' + Array.from({ length: 21 }, (_, i) => `"k${i + 1}":"a"`).join(',') + '}',
-    2,
-  )
+  const wide = propsOf('track y {' + Array.from({ length: 21 }, (_, i) => `"k${i + 1}":"a"`).join(',') + '}', 2)
   assert.equal(Object.keys(wide ?? {}).length, 21)
   assert.deepEqual(propsOf('track x {"Bad Key!":"v"}', 2), { 'Bad Key!': 'v' })
 })

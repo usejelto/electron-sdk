@@ -11,9 +11,7 @@ if (report === undefined) {
   process.exit(1)
 }
 
-const offenders = report.files
-  .map((entry) => entry.path)
-  .filter((path) => path.includes('conformance-host'))
+const offenders = report.files.map((entry) => entry.path).filter((path) => path.includes('conformance-host'))
 
 if (offenders.length > 0) {
   console.error(`package: the npm tarball must not ship conformance-host, but found: ${offenders.join(', ')}`)

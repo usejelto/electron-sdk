@@ -43,7 +43,8 @@ module.exports = {
     {
       name: 'sdk-not-host-or-scripts',
       severity: 'error',
-      comment: 'The SDK never imports the conformance host, the packaging scripts or the build script, none of which ships.',
+      comment:
+        'The SDK never imports the conformance host, the packaging scripts or the build script, none of which ships.',
       from: { path: '^src/' },
       to: { path: '^(host/|scripts/|build\\.mjs$)' },
     },

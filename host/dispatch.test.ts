@@ -21,8 +21,7 @@ function fakeSdk(overrides: Partial<HostSdk> = {}): Fake {
   const base: HostSdk = {
     init: (key: string, app?: string) => record('init', key, app),
     track: (name: string, props?: Record<string, PropValue>) => record('track', name, props),
-    onboarding: (step: string, status: string, reason?: string) =>
-      record('onboarding', step, status, reason),
+    onboarding: (step: string, status: string, reason?: string) => record('onboarding', step, status, reason),
     setProps: (props: Record<string, PropValue>) => record('setProps', props),
     installId: () => {
       record('installId')
@@ -30,7 +29,10 @@ function fakeSdk(overrides: Partial<HostSdk> = {}): Fake {
     },
     reset: () => record('reset'),
     disable: () => record('disable'),
-    legacyVersion: () => { record('legacyVersion'); return true },
+    legacyVersion: () => {
+      record('legacyVersion')
+      return true
+    },
     exportState: () => {
       record('exportState')
       return { install_id: '', install_claimed: false, queue: { bytes: 0, events: [] } }
@@ -71,7 +73,11 @@ test('init without a slug passes none', async () => {
 
 test('conformance origin hint is passed through the public init option', async () => {
   let received: unknown[] = []
-  const sdk = fakeSdk({ init: (...args) => { received = args } })
+  const sdk = fakeSdk({
+    init: (...args) => {
+      received = args
+    },
+  })
   const dispatcher = createDispatcher(sdk, { installOrigin: 'existing' })
   await dispatcher.dispatch('init prd_conform001 desktop')
   assert.deepEqual(received, ['prd_conform001', 'desktop', undefined, 'existing'])
@@ -177,7 +183,10 @@ test('reset and disable are one call and one reply each', async () => {
   const dispatcher = createDispatcher(sdk)
   assert.deepEqual((await dispatcher.dispatch('reset')).reply, { cmd: 'reset', ok: true })
   assert.deepEqual((await dispatcher.dispatch('disable')).reply, { cmd: 'disable', ok: true })
-  assert.deepEqual(sdk.calls, [{ method: 'reset', args: [] }, { method: 'disable', args: [] }])
+  assert.deepEqual(sdk.calls, [
+    { method: 'reset', args: [] },
+    { method: 'disable', args: [] },
+  ])
 })
 
 test('sleep delegates to the SDK clock and replies only when it resolves', async () => {

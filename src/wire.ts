@@ -50,7 +50,6 @@ export interface EventMetadata {
   installID?: string
 }
 
-
 /** §3 `n`. */
 export const RE_EVENT_NAME = /^[a-z0-9_:.-]{1,64}$/
 /** §3 `props` key. */
@@ -94,8 +93,10 @@ export function gateTrackProps(props: Record<string, PropValue> | undefined, eve
     return false
   }
   const origin = props['install_origin']
-  if ('install_origin' in props && (eventName !== 'install' ||
-    (origin !== 'new' && origin !== 'existing' && origin !== 'unknown'))) {
+  if (
+    'install_origin' in props &&
+    (eventName !== 'install' || (origin !== 'new' && origin !== 'existing' && origin !== 'unknown'))
+  ) {
     log.log('drop event: install_origin is reserved for install and must be new, existing or unknown')
     return false
   }
@@ -254,7 +255,6 @@ export function byUTF8Bytes(a: string, b: string): number {
   return Buffer.compare(Buffer.from(a, 'utf8'), Buffer.from(b, 'utf8'))
 }
 
-
 function encodeValue(value: PropValue): string {
   if (typeof value === 'string') return JSON.stringify(value)
   if (typeof value === 'boolean') return value ? 'true' : 'false'
@@ -329,7 +329,6 @@ export function buildEnvelope(productKey: string, events: string[]): { body: Buf
   if (taken.length === 0) return { body: Buffer.alloc(0), used: 0 }
   return { body: Buffer.from(`${head}${taken.join(',')}]}`, 'utf8'), used: taken.length }
 }
-
 
 export interface Rejection {
   i: number

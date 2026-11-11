@@ -13,7 +13,11 @@ import { dirname } from 'node:path'
 export function ensurePrivateDir(dir: string): void {
   mkdirSync(dir, { recursive: true, mode: 0o700 })
   if (process.platform === 'win32') return
-  try { chmodSync(dir, 0o700) } catch { /* fail-soft */ }
+  try {
+    chmodSync(dir, 0o700)
+  } catch {
+    /* fail-soft */
+  }
 }
 
 /** Replace a checkpoint without exposing a partially written destination. */
@@ -30,8 +34,17 @@ export function atomicWrite(path: string, data: string, durable = true): boolean
     renameSync(temporary, path)
     return true
   } catch {
-    if (fd !== undefined) try { closeSync(fd) } catch { /* fail-soft */ }
-    try { rmSync(temporary, { force: true }) } catch { /* fail-soft */ }
+    if (fd !== undefined)
+      try {
+        closeSync(fd)
+      } catch {
+        /* fail-soft */
+      }
+    try {
+      rmSync(temporary, { force: true })
+    } catch {
+      /* fail-soft */
+    }
     return false
   }
 }

@@ -9,21 +9,28 @@ test('legacy or corrupt update intents are ignored without losing valid install 
   const dir = mkdtempSync(join(tmpdir(), 'jelto-store-'))
   try {
     for (const pending of [undefined, null, 42, 'broken', {}, { id: 'x', n: 'app_updated', t: '0', props: {} }]) {
-      writeFileSync(join(dir, 'state.json'), JSON.stringify({ install_id: 'existing', install_claimed: true, last_app_version: 'B', pending_update: pending }))
+      writeFileSync(
+        join(dir, 'state.json'),
+        JSON.stringify({ install_id: 'existing', install_claimed: true, last_app_version: 'B', pending_update: pending }),
+      )
       const state = new Store(dir).load()
       assert.equal(state.install_id, 'existing')
       assert.equal(state.install_claimed, true)
       assert.equal(state.last_app_version, 'B')
       assert.equal(state.pending_update, undefined)
     }
-  } finally { rmSync(dir, { recursive: true, force: true }) }
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
 })
 
 test('wipe deletes only what this SDK put in the state directory', () => {
   const dir = mkdtempSync(join(tmpdir(), 'jelto-store-wipe-'))
   try {
     const store = new Store(dir)
-    store.update((state) => { state.install_id = 'x' })
+    store.update((state) => {
+      state.install_id = 'x'
+    })
     writeFileSync(join(dir, 'queue.jsonl'), '{"id":"a","n":"x","t":"0"}\n')
     writeFileSync(join(dir, 'state.json.tmp'), 'torn')
     writeFileSync(join(dir, 'queue.jsonl.tmp'), 'torn')
@@ -43,17 +50,23 @@ test('wipe deletes only what this SDK put in the state directory', () => {
     // The directory itself is left in place — C18/C22d's readdir assertion
     // (engine.test.ts) depends on it still existing.
     assert.equal(existsSync(dir), true)
-  } finally { rmSync(dir, { recursive: true, force: true }) }
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
 })
 
-test('wipe on a directory holding only this SDK\'s own files leaves it empty', () => {
+test("wipe on a directory holding only this SDK's own files leaves it empty", () => {
   const dir = mkdtempSync(join(tmpdir(), 'jelto-store-wipe-empty-'))
   try {
     const store = new Store(dir)
-    store.update((state) => { state.install_id = 'x' })
+    store.update((state) => {
+      state.install_id = 'x'
+    })
     store.wipe()
     assert.deepEqual(readdirSync(dir), [])
-  } finally { rmSync(dir, { recursive: true, force: true }) }
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
 })
 
 test('a state directory that already exists is re-asserted owner-only (spec/sdk-conformance.md §5)', (t) => {
@@ -65,8 +78,12 @@ test('a state directory that already exists is re-asserted owner-only (spec/sdk-
   try {
     chmodSync(dir, 0o755)
     assert.equal(statSync(dir).mode & 0o777, 0o755)
-    new Store(dir).update((state) => { state.install_id = 'x' })
+    new Store(dir).update((state) => {
+      state.install_id = 'x'
+    })
     assert.equal(statSync(dir).mode & 0o777, 0o700)
     assert.equal(statSync(join(dir, 'state.json')).mode & 0o777, 0o600)
-  } finally { rmSync(dir, { recursive: true, force: true }) }
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
 })
