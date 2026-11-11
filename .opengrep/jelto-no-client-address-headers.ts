@@ -7,6 +7,8 @@ declare const express: { get(name: string): string | undefined; header(name: str
 export const forwardedFor = request.headers.get('x-forwarded-for')
 // ruleid: jelto-no-client-address-headers
 export const realIP = request.headers.get('X-Real-IP')
+// Double quotes are the case under test, so Prettier leaves the next line alone.
+// prettier-ignore
 // ruleid: jelto-no-client-address-headers
 export const cloudflare = request.headers?.get("CF-Connecting-IP")
 // ruleid: jelto-no-client-address-headers

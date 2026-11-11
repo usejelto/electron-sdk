@@ -1,0 +1,14 @@
+# Prettier reads .gitignore as well; these are the tracked files it leaves alone.
+# Build output and release staging.
+dist/
+release-artifacts/
+# Vendored snapshots: their producers format them, and a checksum pins each file.
+vendor/
+# npm writes the lockfile, and `make knip-baseline` writes the Knip baseline.
+package-lock.json
+.knip-baseline.json
+# Markdown: Prettier pads every table column to its widest cell, so one new row
+# rewrites the whole table; the README's examples are wrapped for reading, not
+# at the code's line width; and CODE_OF_CONDUCT.md is the Contributor Covenant
+# text as published.
+*.md

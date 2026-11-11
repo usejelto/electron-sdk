@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := test
-.PHONY: build test conformance conformance-run conformance-twice package security check npm-audit lint deadcode boundaries
+.PHONY: build test conformance conformance-run conformance-twice package security check npm-audit lint deadcode boundaries format-check
 
 # The shared quality targets (hooks, tools, secrets, osv, workflow-audit, sast)
 # arrive from the contracts repository as a checksummed snapshot; `make inputs`
@@ -71,9 +71,15 @@ deadcode: node_modules knip
 boundaries: node_modules
 	npx --no-install depcruise src host scripts build.mjs --config .dependency-cruiser.cjs
 
+# Prettier (.prettierrc.json, .prettierignore). Its settings are the ones that
+# changed the fewest lines of the existing code: no semicolons, single quotes,
+# and lines up to 124 characters.
+format-check: node_modules
+	npx --no-install prettier --check .
+
 # The whole gate: what to run before a pull request, and what CI runs.
 # Conformance twice runs beside it in CI on release or on request.
-check: lint deadcode boundaries test build package security
+check: lint deadcode boundaries test build package security format-check
 
 security: secrets workflow-audit osv npm-audit sast
 
