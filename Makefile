@@ -45,4 +45,4 @@ package: build
 	node scripts/check-pack.mjs
 	npm pack
 
-security: secrets workflow-audit
+security: secrets workflow-audit osv
