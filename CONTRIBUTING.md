@@ -15,7 +15,7 @@ For installation and account help, see [SUPPORT.md](SUPPORT.md).
 
 ## Local development
 
-Node.js 24.22.2 (the release `.nvmrc` pins), npm, Make, Python 3.11 or later, and the Go toolchain required by the contracts archive. Node.js 24 is needed for source tests; the distributed SDK supports Node.js 18 or later.
+Node.js 24.22.2 (the release `.nvmrc` pins), npm, Make, Python 3.11 or later, and the Go toolchain required by the contracts archive. Node.js 24 is needed for source tests; the distributed SDK supports Node.js 22 or later, and CI runs the tests on the oldest Node 22 release as well.
 
 Fork and clone this repository, create a branch from `main`, and run commands
 from this component's root. The standalone checkout contains its build inputs;

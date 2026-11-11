@@ -1,7 +1,10 @@
 // Build for @jelto/electron. Three artefacts, no framework:
 //
 //   dist/index.mjs / index.cjs   the SDK a customer links: TypeScript, main
-//                                process only, Node >= 18, no native addon.
+//                                process only, Node >= 22 (package.json
+//                                engines; the bundle keeps node18 syntax,
+//                                which every supported release runs), no
+//                                native addon.
 //                                `electron` is EXTERNAL --
 //                                the SDK requires it lazily and only to resolve
 //                                §5's default state directory, so the bundle

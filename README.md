@@ -1,6 +1,6 @@
 # @jelto/electron
 
-Jelto analytics for Electron's main process. Requires Node.js 18 or later and has
+Jelto analytics for Electron's main process. Requires Node.js 22 or later and has
 no native addons or runtime dependencies.
 
 ## Install
