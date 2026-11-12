@@ -8,7 +8,7 @@ import * as https from 'node:https'
 import type { Debug } from './debug.ts'
 
 /** The network request timeout that governs the retryable-failure class. */
-export const REQUEST_TIMEOUT_MS = 5_000
+const REQUEST_TIMEOUT_MS = 5_000
 
 /**
  * spec/sdk-conformance.md §2/§3's `X-Mock` carries JELTO_MOCK verbatim into a
@@ -23,7 +23,7 @@ const MOCK_HEADER_SAFE = /^[\x21-\x7e]+$/
  * "oversized bodies"); an SDK that buffered it would blow its own bounded
  * memory ceiling on a server bug.
  */
-export const RESPONSE_READ_CAP = 1 << 20
+const RESPONSE_READ_CAP = 1 << 20
 
 export interface Outcome {
   status: number

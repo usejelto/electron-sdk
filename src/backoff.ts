@@ -3,7 +3,7 @@
 // header delays cap at 3,600 seconds (C8–C8c). Only the duration multiplier uses
 // floating point; instants remain exact integers.
 
-export const BACKOFF_FIRST_STEP_MS = 1_000
+const BACKOFF_FIRST_STEP_MS = 1_000
 export const BACKOFF_CEILING_MS = 3_600_000
 export const JITTER_LOW = 0.8
 export const JITTER_HIGH = 1.2

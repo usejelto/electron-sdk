@@ -102,10 +102,10 @@ place it applies, with the reason beside it:
   with the reason in a comment above it.
 
 Knip started with a baseline of the findings that predate it,
-`.knip-baseline.json` (30 exports used only inside their own module). Only a
-new finding fails, and a fixed one fails until it leaves the baseline (`make
-knip-baseline`, then review the diff). Nothing is added to a baseline to make
-a check pass.
+`.knip-baseline.json`; its 30 exports used only inside their own module are
+no longer exported, and the baseline is empty. A fixed finding fails until it
+leaves the baseline (`make knip-baseline`, then review the diff). Nothing is
+added to a baseline to make a check pass.
 
 Never disable a rule, a file or a directory wholesale, and never relax a
 threshold to make a check pass.

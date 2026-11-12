@@ -36,7 +36,7 @@ const ARCH_BY_PROCESS_ARCH: Record<string, string> = {
 }
 
 /** §5.2 caps `av` and `osv` at 32; the schema also gives `av` `minLength: 1`. */
-export function truncate32(value: string): string {
+function truncate32(value: string): string {
   return [...value].slice(0, 32).join('')
 }
 
@@ -91,7 +91,7 @@ export function knownAppVersion(value: string): boolean {
  * answers `15.1` on macOS where `os.release()` answers the Darwin kernel
  * version `24.1.0` — else `os.release()`.
  */
-export function resolveOSVersion(): string {
+function resolveOSVersion(): string {
   const electronProcess = process as NodeJS.Process & { getSystemVersion?: () => string }
   try {
     const version = electronProcess.getSystemVersion?.()

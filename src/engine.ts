@@ -19,7 +19,6 @@ import {
   buildEnvelope,
   encodeEvent,
   gateAppSlug,
-  gateClientVersion,
   gateEventName,
   gateInstallProps,
   gateOnboarding,
@@ -35,31 +34,31 @@ import {
 } from './wire.ts'
 
 /** The first flush runs 2 s after init. */
-export const INIT_FLUSH_DELAY_MS = 2_000
+const INIT_FLUSH_DELAY_MS = 2_000
 /** Every track call debounces the flush by 5 s. */
-export const TRACK_DEBOUNCE_MS = 5_000
+const TRACK_DEBOUNCE_MS = 5_000
 /** Mark the install claimed after 30 days of attempts if no 202 has arrived. */
-export const INSTALL_CLAIM_AFTER_MS = 30 * 24 * 60 * 60 * 1000
+const INSTALL_CLAIM_AFTER_MS = 30 * 24 * 60 * 60 * 1000
 /** wire §8 (rev 0.26): a `stop.until` is honoured for at most 30 days from receipt. */
-export const STOP_MAX_PARK_MS = 30n * 24n * 60n * 60n * 1000n
+const STOP_MAX_PARK_MS = 30n * 24n * 60n * 60n * 1000n
 /**
  * Bounds the termination flush, which is best effort on app background or
  * termination. C1 gives the process 1 s to exit with 1 000 events queued, so
  * the flush cannot be unbounded.
  */
-export const TERMINATION_BUDGET_MS = 600
+const TERMINATION_BUDGET_MS = 600
 /** One `advance` in REAL time, however many barriers it takes. */
-export const SETTLE_BUDGET_MS = 30_000
+const SETTLE_BUDGET_MS = 30_000
 /**
  * C3b: the UTC day boundary must be seen on a clock that runs through system
  * sleep, but Node timers count the monotonic clock, which pauses while the
  * machine sleeps. Capping real waits makes a woken machine re-read the wall
  * clock within a minute; an early wake finds nothing due.
  */
-export const REAL_WAIT_CAP_MS = 60_000
+const REAL_WAIT_CAP_MS = 60_000
 
 /** spec/wire-v1.md §2: a product ID's whole legal grammar. */
-export const PRODUCT_KEY_SHAPE = /^prd_[a-z0-9]{10}$/
+const PRODUCT_KEY_SHAPE = /^prd_[a-z0-9]{10}$/
 /** This SDK's own `install_id`: a canonical, lowercase, hyphenated UUID. */
 const INSTALL_ID_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
@@ -983,4 +982,4 @@ function raceTimeout(promise: Promise<void>, millis: number): Promise<void> {
   })
 }
 
-export { gateClientVersion, Clock, Debug }
+export { Clock, Debug }

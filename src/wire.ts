@@ -7,9 +7,9 @@ import { Debug } from './debug.ts'
 /** spec/wire-v1.md §2/§3/§4's numbers. */
 export const MAX_BODY_BYTES = 65_536
 export const MAX_EVENTS_PER_REQUEST = 100
-export const MAX_PROPS = 20
-export const MAX_PROP_STRING = 200
-export const MAX_REASON_CHARS = 64
+const MAX_PROPS = 20
+const MAX_PROP_STRING = 200
+const MAX_REASON_CHARS = 64
 
 /** The client version follows the `electron/1.0.3` shape (spec/wire-v1.md §3). */
 export const SDK_CLIENT_VERSION = 'electron/1.2.0'
@@ -40,7 +40,7 @@ export interface QueuedEvent {
   metadata?: EventMetadata
 }
 
-export interface EventMetadata {
+interface EventMetadata {
   av: string
   os: string
   osv: string
@@ -51,19 +51,19 @@ export interface EventMetadata {
 }
 
 /** §3 `n`. */
-export const RE_EVENT_NAME = /^[a-z0-9_:.-]{1,64}$/
+const RE_EVENT_NAME = /^[a-z0-9_:.-]{1,64}$/
 /** §3 `props` key. */
-export const RE_PROP_KEY = /^[a-z0-9_]{1,32}$/
+const RE_PROP_KEY = /^[a-z0-9_]{1,32}$/
 /** §4 install-property value — one grammar for all of them, `license` included. */
-export const RE_INSTALL_PROP_VALUE = /^[a-z0-9_.-]{1,24}$/
+const RE_INSTALL_PROP_VALUE = /^[a-z0-9_.-]{1,24}$/
 /** §4 onboarding `<step>`. */
-export const RE_ONBOARDING_STEP = /^[a-z0-9_-]{1,32}$/
+const RE_ONBOARDING_STEP = /^[a-z0-9_-]{1,32}$/
 /** §4 onboarding `reason`. */
-export const RE_ONBOARDING_REASON = /^[a-z0-9_.-]+$/
+const RE_ONBOARDING_REASON = /^[a-z0-9_.-]+$/
 /** §3 `v`, normative since rev 0.16. */
-export const RE_CLIENT_VERSION = /^[a-z]+\/[0-9A-Za-z.+-]{1,24}$/
+const RE_CLIENT_VERSION = /^[a-z]+\/[0-9A-Za-z.+-]{1,24}$/
 /** §5.2 `a`. */
-export const RE_APP_SLUG = /^[a-z0-9-]{1,32}$/
+const RE_APP_SLUG = /^[a-z0-9-]{1,32}$/
 /** A whole decimal, which is the only thing that may be spliced in as `t`. */
 const RE_DECIMAL = /^-?[0-9]+$/
 
@@ -251,7 +251,7 @@ export function gateAppSlug(raw: string | undefined, log: Debug): string | null 
 }
 
 /** Ascending UTF-8 byte order. Every gated key is ASCII, so this is exact. */
-export function byUTF8Bytes(a: string, b: string): number {
+function byUTF8Bytes(a: string, b: string): number {
   return Buffer.compare(Buffer.from(a, 'utf8'), Buffer.from(b, 'utf8'))
 }
 
@@ -330,13 +330,13 @@ export function buildEnvelope(productKey: string, events: string[]): { body: Buf
   return { body: Buffer.from(`${head}${taken.join(',')}]}`, 'utf8'), used: taken.length }
 }
 
-export interface Rejection {
+interface Rejection {
   i: number
   reason: string
   field: string
 }
 
-export interface StopDirective {
+interface StopDirective {
   /** wire §8 sends `until` in Unix SECONDS. `null` when it is not whole seconds. */
   untilSeconds: bigint | null
   untilText: string

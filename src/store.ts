@@ -38,7 +38,7 @@ export interface PersistedState {
   stop_probe_due: boolean
 }
 
-export function emptyState(): PersistedState {
+function emptyState(): PersistedState {
   return {
     install_id: '',
     last_app_version: '',

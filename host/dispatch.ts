@@ -33,7 +33,7 @@ export interface HostSdk {
   stop(): Promise<void>
 }
 
-export interface DispatchResult {
+interface DispatchResult {
   reply: Reply
   /** true when the process must now end: `exit` alone sets it. */
   terminate: boolean

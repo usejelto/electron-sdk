@@ -58,10 +58,8 @@ lint: node_modules
 
 # Knip (knip.config.ts): files nothing imports, unused exports and
 # dependencies, and dependencies used but not declared. The 30 exports that
-# predate it (module constants, helpers and types exported beside the ones the
-# tests import, none of them reachable through package.json `exports`) are
-# listed in .knip-baseline.json; a fixed one fails until `make knip-baseline`
-# removes it.
+# predated it, each used only inside its own module, are no longer exported,
+# so .knip-baseline.json is empty; nothing is added to it.
 KNIP_BASELINE := .knip-baseline.json
 deadcode: node_modules knip
 
