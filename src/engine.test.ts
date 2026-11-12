@@ -1053,7 +1053,13 @@ test('spec/wire-v1.md §2: a key outside the grammar is refused, and init stays 
 })
 
 test('spec/sdk-conformance.md §5: a null state directory leaves the engine permanently inactive', async () => {
-  const stderr = { write: (): boolean => true }
+  const written: string[] = []
+  const stderr = {
+    write: (chunk: string | Uint8Array): boolean => {
+      written.push(String(chunk))
+      return true
+    },
+  }
   const engine = new Engine({
     endpoint: 'https://example.invalid/v1/e',
     stateDir: null,
@@ -1070,6 +1076,9 @@ test('spec/sdk-conformance.md §5: a null state directory leaves the engine perm
   assert.equal(engine.installId(), '')
   assert.deepEqual(engine.exportState(), { install_id: '', install_claimed: false, queue: { bytes: 0, events: [] } })
   await engine.stop()
+  // Inactive is silent too, even with debug on: the one "SDK inactive" line
+  // comes from index.ts when it builds the SDK, not from the engine.
+  assert.deepEqual(written, [])
 })
 
 test('an install_id outside the canonical UUID grammar is replaced, not trusted', async () => {
