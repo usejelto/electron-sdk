@@ -41,9 +41,9 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@types/node": "^24.9.2",
+    "@types/node": "^26.6.6",
     "dependency-cruiser": "^18.7.2",
-    "esbuild": "^0.25.0",
+    "esbuild": "^0.28.2",
     "eslint": "^10.14.0",
     "globals": "^17.14.0",
     "knip": "^6.45.1",
